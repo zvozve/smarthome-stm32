@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "J-Link Debug",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "jlink",
+            "device": "STM32F407ZG",
+            "interface": "swd",
+            "executable": "${workspaceFolder}/build/Release/SmartHome.elf",
+            "runToEntryPoint": "main",
+            "preLaunchTask": "Build (Release)"
+        }
+    ]
+}
