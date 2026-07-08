@@ -59,6 +59,8 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define CPU_STA_Pin GPIO_PIN_13
 #define CPU_STA_GPIO_Port GPIOC
+#define ETH_RST_Pin GPIO_PIN_3
+#define ETH_RST_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
 
