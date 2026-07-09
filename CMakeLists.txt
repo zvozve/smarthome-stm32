@@ -43,12 +43,12 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 )
 
 file(GLOB_RECURSE USER_SOURCES 
-    "Drivers/BSP/HLK_RM58S/Src/*.c"
-    "Drivers/BSP/LAN8720A/Src/*.c"
-    "Drivers/cJSON/Src/*.c"
-    "Drivers/SEGGER_RTT/Src/*.c"
-    "User/App/Entry/Src/*.c"
-    "User/App/WOL/Src/*.c"
+    "User/App/Src/*.c"
+    "User/Hardware/hlk_rm58s/Src/*.c"
+    "User/Hardware/lan8720a/Src/*.c"
+    "User/Protocols/cJSON/Src/*.c"
+    "User/Protocols/SEGGER_RTT/Src/*.c"
+    "User/Protocols/wol/Src/*.c"
 )
 
 # Add sources to executable
@@ -60,13 +60,13 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
-    Drivers/BSP/HLK_RM58S/Inc
-    Drivers/BSP/LAN8720A/Inc
-    Drivers/cJSON/Inc
-    Drivers/SEGGER_RTT/Inc
-    User/App/Entry/Inc
-    User/App/WOL/Inc
+    User/App/Inc
     User/Config/Inc
+    User/Hardware/hlk_rm58s/Inc
+    User/Hardware/lan8720a/Inc
+    User/Protocols/cJSON/Inc
+    User/Protocols/SEGGER_RTT/Inc
+    User/Protocols/wol/Inc
 )
 
 # Add project symbols (macros)
