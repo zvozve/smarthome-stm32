@@ -56,6 +56,9 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(CPU_STA_GPIO_Port, CPU_STA_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOG, WIFI_ES_Pin|WIFI_RST_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(ETH_RST_GPIO_Port, ETH_RST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : CPU_STA_Pin */
@@ -64,6 +67,25 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(CPU_STA_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : WIFI_STS_Pin */
+  GPIO_InitStruct.Pin = WIFI_STS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(WIFI_STS_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : WIFI_ES_Pin WIFI_RST_Pin */
+  GPIO_InitStruct.Pin = WIFI_ES_Pin|WIFI_RST_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : WIFI_SOT_Pin */
+  GPIO_InitStruct.Pin = WIFI_SOT_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(WIFI_SOT_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : ETH_RST_Pin */
   GPIO_InitStruct.Pin = ETH_RST_Pin;

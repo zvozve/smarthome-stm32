@@ -59,6 +59,14 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define CPU_STA_Pin GPIO_PIN_13
 #define CPU_STA_GPIO_Port GPIOC
+#define WIFI_STS_Pin GPIO_PIN_14
+#define WIFI_STS_GPIO_Port GPIOD
+#define WIFI_ES_Pin GPIO_PIN_6
+#define WIFI_ES_GPIO_Port GPIOG
+#define WIFI_SOT_Pin GPIO_PIN_7
+#define WIFI_SOT_GPIO_Port GPIOG
+#define WIFI_RST_Pin GPIO_PIN_8
+#define WIFI_RST_GPIO_Port GPIOG
 #define ETH_RST_Pin GPIO_PIN_3
 #define ETH_RST_GPIO_Port GPIOD
 

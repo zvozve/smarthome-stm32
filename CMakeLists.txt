@@ -42,20 +42,27 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
 )
 
+file(GLOB_RECURSE USER_SOURCES 
+    "Drivers/BSP/HLK_RM58S/Src/*.c"
+    "Drivers/BSP/LAN8720A/Src/*.c"
+    "Drivers/cJSON/Src/*.c"
+    "Drivers/SEGGER_RTT/Src/*.c"
+    "User/App/Entry/Src/*.c"
+    "User/App/WOL/Src/*.c"
+)
+
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-    Drivers/BSP/LAN8720A/Src/lan8720a_port.c
-    Drivers/SEGGER_RTT/Src/SEGGER_RTT.c
-    Drivers/SEGGER_RTT/Src/SEGGER_RTT_printf.c
-    User/App/Entry/Src/App_entry.c
-    User/App/WOL/Src/wol.c
+    ${USER_SOURCES}
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
+    Drivers/BSP/HLK_RM58S/Inc
     Drivers/BSP/LAN8720A/Inc
+    Drivers/cJSON/Inc
     Drivers/SEGGER_RTT/Inc
     User/App/Entry/Inc
     User/App/WOL/Inc
