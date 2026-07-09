@@ -1,5 +1,5 @@
 /**
- * user_network.h — Centralized network configuration for SmartHome
+ * network_config.h — Centralized network configuration for SmartHome
  *
  * All WiFi, MQTT, IP, and port settings are managed here.
  * Include this header wherever network parameters are needed.
@@ -65,25 +65,27 @@
 #define UART_PACK_TIMEOUT   "10"
 
 /*===========================================================================
+ * LAN (Ethernet) Configuration — WOL only, direct connection
+ *===========================================================================*/
+
+// STM32 LAN interface IP settings (static, no DHCP)
+#define LAN_IP_ADDR         "192.168.31.200"      // STM32's LAN IP
+#define LAN_NETMASK         "255.255.255.0"
+#define LAN_GATEWAY         "192.168.31.1"
+
+// Target PC (WOL destination) settings
+#define TARGET_PC_IP        "192.168.31.100"      // PC static IP (same subnet)
+#define TARGET_PC_MAC_STR   "70:E5:B8:54:07:0E"   // PC MAC address (string format)
+#define TARGET_PC_MAC_BYTE  {0x70, 0xB5, 0xE8, 0x54, 0x07, 0x0E}  // PC MAC address (byte array)
+
+// WOL specific settings
+#define WOL_UDP_PORT            9                  // Standard WOL port (7 or 9)
+#define WOL_BROADCAST_IP        "192.168.31.255"  // LAN subnet broadcast address
+
+/*===========================================================================
  * Timeout Settings
  *===========================================================================*/
 #define RESPONSE_TIMEOUT    2000
 #define CONNECTION_TIMEOUT  "0"
-
-/*===========================================================================
- * WOL (Wake-on-LAN) Target MAC Address
- *===========================================================================*/
-#define WOL_TARGET_MAC_STR      "AA:BB:CC:DD:EE:FF"          // 字符串格式，便于打印调试
-#define WOL_TARGET_MAC_BYTE     {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}  // 字节数组，用于构造魔术包
-
-/*===========================================================================
- * WOL UDP Port (标准端口: 7 或 9)
- *===========================================================================*/
-#define WOL_UDP_PORT            9
-
-/*===========================================================================
- * WOL Broadcast Address
- *===========================================================================*/
-#define WOL_BROADCAST_IP        "255.255.255.255"
 
 #endif /* __NETWORK_CONFIG_H */

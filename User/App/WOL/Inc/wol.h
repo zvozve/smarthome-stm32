@@ -1,13 +1,37 @@
 #ifndef __WOL_H
 #define __WOL_H
 
-#include "user_network.h"
+#include "network_config.h"
 #include "lwip/err.h"
+#include <stdbool.h>
+
+/*===========================================================================
+ * WOL Debug Configuration
+ *===========================================================================*/
+#define WOL_DEBUG_ENABLE    1
+
+#if WOL_DEBUG_ENABLE
+    #include "SEGGER_RTT.h"
+    #define WOL_LOG(fmt, ...)   SEGGER_RTT_printf(0, "[WOL] " fmt, ##__VA_ARGS__)
+#else
+    #define WOL_LOG(fmt, ...)   ((void)0)
+#endif
 
 /**
-  * @brief  构造并发送WOL魔术包（使用预定义的targetMac）
-  * @retval err_t: ERR_OK表示成功，其他值表示失败
-  */
-err_t send_wol_magic_packet(void);
+ * @brief Send WOL magic packet via LAN Ethernet frame
+ * @retval ERR_OK on success, others on failure
+ */
+err_t send_wol(void);
+
+/**
+ * @brief Print target MAC address for debugging
+ */
+void wol_print_mac(void);
+
+/**
+ * @brief Check if LAN network interface is ready
+ * @retval true if ready, false otherwise
+ */
+bool wol_check_network_ready(void);
 
 #endif

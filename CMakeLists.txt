@@ -46,6 +46,9 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Drivers/BSP/LAN8720A/Src/lan8720a_port.c
+    Drivers/SEGGER_RTT/Src/SEGGER_RTT.c
+    Drivers/SEGGER_RTT/Src/SEGGER_RTT_printf.c
+    User/App/Entry/Src/App_entry.c
     User/App/WOL/Src/wol.c
 )
 
@@ -53,7 +56,10 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     Drivers/BSP/LAN8720A/Inc
+    Drivers/SEGGER_RTT/Inc
+    User/App/Entry/Inc
     User/App/WOL/Inc
+    User/Config/Inc
 )
 
 # Add project symbols (macros)

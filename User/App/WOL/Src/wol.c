@@ -1,85 +1,95 @@
 #include "wol.h"
-#include "lwip/udp.h"
-#include "lwip/ip_addr.h"
-#include "lwip/inet.h"
+#include "string.h"
+#include "lwip/netif.h"
+#include "lwip/pbuf.h"
+#include "netif/ethernet.h"
 
-// 使用user_network.h中定义的MAC地址
-const uint8_t targetMac[6] = WOL_TARGET_MAC_BYTE;
+// Use MAC from network_config.h
+const uint8_t targetMac[6] = TARGET_PC_MAC_BYTE;
 
-// // 在main.c或其他地方调用
-// if (send_wol_magic_packet() == ERR_OK) {
-//     printf("WOL packet sent successfully!\r\n");
-// } else {
-//     printf("Failed to send WOL packet!\r\n");
-// }
+// External LAN network interface (defined by LwIP/ETH init)
+extern struct netif gnetif;   // Replace with your actual LAN netif variable
 
-// // 或者连续发送多次提高成功率
-// for (int i = 0; i < 3; i++) {
-//     if (send_wol_magic_packet() == ERR_OK) {
-//         printf("WOL packet sent (attempt %d)\r\n", i + 1);
-//         break;
-//     }
-//     HAL_Delay(100);
-// }
+void wol_print_mac(void) {
+    WOL_LOG("Target MAC: %02X:%02X:%02X:%02X:%02X:%02X\r\n",
+            targetMac[0], targetMac[1], targetMac[2],
+            targetMac[3], targetMac[4], targetMac[5]);
+}
 
-/**
-  * @brief  构造并发送WOL魔术包
-  * @retval err_t: ERR_OK表示成功，其他值表示失败
-  */
-err_t send_wol_magic_packet(void) {
-    struct udp_pcb *udp_pcb;
+bool wol_check_network_ready(void) {
+    struct netif *netif = &gnetif;
+    if (netif == NULL) {
+        WOL_LOG("LAN interface not initialized!\r\n");
+        return false;
+    }
+    if (!netif_is_up(netif) || !netif_is_link_up(netif)) {
+        WOL_LOG("LAN link is down!\r\n");
+        return false;
+    }
+    if (ip4_addr_isany_val(netif->ip_addr)) {
+        WOL_LOG("LAN has no IP address!\r\n");
+        return false;
+    }
+    char ip_str[16];
+    ip4addr_ntoa_r(&netif->ip_addr, ip_str, sizeof(ip_str));
+    WOL_LOG("LAN ready, IP: %s\r\n", ip_str);
+    return true;
+}
+
+err_t send_wol(void) {
+    struct netif *netif = &gnetif;
     struct pbuf *pkt_buf;
     err_t err;
-    ip_addr_t dest_ip;
+    struct eth_hdr *ethhdr;
 
-    // 魔术包结构: 6字节同步码(0xFF) + 16次目标MAC地址
-    uint8_t magic_packet[102] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    for (int i = 6, j = 0; i < 102; i++, j = (j + 1) % 6) {
-        magic_packet[i] = targetMac[j];
+    if (!wol_check_network_ready()) {
+        WOL_LOG("LAN not ready, cannot send WOL!\r\n");
+        return ERR_IF;
     }
 
-    // 1. 申请内存包
-    pkt_buf = pbuf_alloc(PBUF_TRANSPORT, sizeof(magic_packet), PBUF_ROM);
+    WOL_LOG("Sending WOL via LAN...\r\n");
+    wol_print_mac();
+
+    // Construct magic packet (102 bytes)
+    uint8_t magic_data[102];
+    memset(magic_data, 0xFF, 6);
+    for (int i = 0; i < 16; i++) {
+        memcpy(&magic_data[6 + i * 6], targetMac, 6);
+    }
+
+    // Allocate pbuf with Ethernet header
+    size_t total_len = sizeof(struct eth_hdr) + sizeof(magic_data);
+    pkt_buf = pbuf_alloc(PBUF_RAW, total_len, PBUF_POOL);
     if (pkt_buf == NULL) {
-        return ERR_MEM;
-    }
-    pkt_buf->payload = magic_packet;
-    pkt_buf->len = pkt_buf->tot_len = sizeof(magic_packet);
-
-    // 2. 创建UDP控制块 (PCB)
-    udp_pcb = udp_new();
-    if (udp_pcb == NULL) {
-        pbuf_free(pkt_buf);
+        WOL_LOG("Failed to allocate pbuf!\r\n");
         return ERR_MEM;
     }
 
-    // 3. 绑定到本地端口 (使用WOL_UDP_PORT)
-    err = udp_bind(udp_pcb, IP_ADDR_ANY, WOL_UDP_PORT);
-    if (err != ERR_OK) {
-        pbuf_free(pkt_buf);
-        udp_remove(udp_pcb);
-        return err;
+    // Fill Ethernet header
+    ethhdr = (struct eth_hdr *)pkt_buf->payload;
+    memset(ethhdr->dest.addr, 0xFF, ETH_HWADDR_LEN);           // Broadcast
+    memcpy(ethhdr->src.addr, netif->hwaddr, ETH_HWADDR_LEN);   // STM32 MAC
+    ethhdr->type = htons(0x0842);   // WOL magic packet ethertype
+
+    // Copy magic packet data
+    if (pkt_buf->next != NULL) {
+        pbuf_take(pkt_buf->next, magic_data, sizeof(magic_data));
+    } else {
+        uint8_t *payload_ptr = (uint8_t *)pkt_buf->payload + sizeof(struct eth_hdr);
+        memcpy(payload_ptr, magic_data, sizeof(magic_data));
+        pkt_buf->len = total_len;
+        pkt_buf->tot_len = total_len;
     }
 
-    // 4. 设置目标IP为广播地址
-    IP4_ADDR(&dest_ip, 255, 255, 255, 255);
-    // 或者用字符串方式：
-    // inet_aton(WOL_BROADCAST_IP, &dest_ip);
-    
-    // 5. 连接并发送数据
-    err = udp_connect(udp_pcb, &dest_ip, WOL_UDP_PORT);
-    if (err != ERR_OK) {
-        pbuf_free(pkt_buf);
-        udp_remove(udp_pcb);
-        return err;
-    }
-    
-    err = udp_send(udp_pcb, pkt_buf);
-    
-    // 6. 断开连接并释放资源
-    udp_disconnect(udp_pcb);
+    // Send via LAN driver
+    err = netif->linkoutput(netif, pkt_buf);
+
     pbuf_free(pkt_buf);
-    udp_remove(udp_pcb);
-    
+
+    if (err == ERR_OK) {
+        WOL_LOG("WOL frame sent! (%d bytes via LAN)\r\n", total_len);
+    } else {
+        WOL_LOG("Send failed (err=%d)\r\n", err);
+    }
     return err;
 }
