@@ -1,12 +1,12 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file           : eth_phy.c
+  * @file           : lan8720a_port.c
   * @brief          : Ethernet PHY hardware reset routine
   ******************************************************************************
   */
 /* USER CODE END Header */
-#include "eth_phy.h"
+#include "lan8720a_port.h"
 
 /**
   * @brief  Simple busy-loop millisecond delay (no HAL/scheduler dependency).

@@ -45,13 +45,15 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-    User/Src/eth_phy.c
+    Drivers/BSP/LAN8720A/Src/lan8720a_port.c
+    User/App/WOL/Src/wol.c
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
-    User/Inc
+    Drivers/BSP/LAN8720A/Inc
+    User/App/WOL/Inc
 )
 
 # Add project symbols (macros)

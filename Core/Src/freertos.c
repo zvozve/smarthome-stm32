@@ -25,7 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "eth_phy.h"
+#include "lan8720a_port.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
