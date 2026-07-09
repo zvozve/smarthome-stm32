@@ -55,16 +55,6 @@
 #define DHCP_LEASE_TIME     "86400"
 
 /*===========================================================================
- * UART Serial Port (HLK-RM58S communication)
- *===========================================================================*/
-#define UART_BAUDRATE       "115200"
-#define UART_DATABITS       "8"
-#define UART_PARITY         "n"
-#define UART_STOPBITS       "1"
-#define UART_PACK_LEN       "64"
-#define UART_PACK_TIMEOUT   "10"
-
-/*===========================================================================
  * LAN (Ethernet) Configuration — WOL only, direct connection
  *===========================================================================*/
 

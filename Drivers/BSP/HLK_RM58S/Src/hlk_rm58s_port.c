@@ -1,27 +1,20 @@
-#include "my_tim.h"
+#include "hlk_rm58s_port.h"
 
 volatile uint32_t us_count = 0; // 在中断中递增的计数器
 
-void TIM_TP_Delay_us(uint16_t us) {
+void TIM_HLK_Delay_us(uint16_t us) {
     uint32_t start = us_count;
-    int32_t ticks = us / TIM_TP_PERIOD_US; // 需要等待的ticks数
+    int32_t ticks = us / TIM_HLK_PERIOD_US; // 需要等待的ticks数
     while ((int32_t)(us_count - start) < ticks); // 正确处理溢出
 }
 
 // 毫秒级延时
-void TIM_TP_Delay_ms(uint16_t ms) {
+void TIM_HLK_Delay_ms(uint16_t ms) {
     for (uint16_t i = 0; i < ms; i++)
     {
-        TIM_TP_Delay_us(1000);  // 1ms = 1000us
+        TIM_HLK_Delay_us(1000);  // 1ms = 1000us
     }
 }
-
-#include "my_uart.h"
-
-/* 全局UART缓冲区定义 */
-usr_uart_t usr_uart1;  // UART1 - HMI
-usr_uart_t usr_uart2;  // UART2 - PLC
-usr_uart_t usr_uart6;  // UART6 - LED
 
 #if UART_ENABLE_DMACPY
 static FIFO_DMA_Context_t fifo_dma_ctx;

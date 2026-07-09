@@ -1,10 +1,11 @@
 #include "hlk_rm58s_driver.h"
+#include "cJSON.h"
 
 Uart_Task_t Uart_Task_WiFi = {
-    .Port = &huart_wifi,
+    .Port = &huart_hlk,
     .RS485_TX_Mode = NULL,
     .RS485_RX_Mode = NULL,
-    .debug_name = "UART_WIFI"
+    .debug_name = "UART_HLK"
 };
 
 // ===========================
@@ -64,11 +65,9 @@ void wifiMaster_cmd_clr(void) {
 }
 
 void wifiMaster_transfer_block(uint16_t us) {
-    #if ENABLE_WIFI_TX_BLOCK
     while (Uart_Task_WiFi.status != UTS_IDLE) {
-        TIM_TP_Delay_us(us);
+        TIM_HLK_Delay_us(us);
     }
-    #endif // ENABLE_WIFI_TX_BLOCK
 }
 
 void wifiMaster_transfer_at_cmd(const char *command, const char *expected_response, uint32_t timeout) {
@@ -96,7 +95,7 @@ void wifiMaster_transfer_at_cmd(const char *command, const char *expected_respon
     memcpy(wifiMaster.Tx.cmdBuf, cmd_buf, wifiMaster.Tx.cmdByte);
 
     Uart_Task_WiFi.status = UTS_REQUESTING;
-    wifiMaster_transfer_block(TIM_TP_PERIOD_US);
+    wifiMaster_transfer_block(TIM_HLK_PERIOD_US);
 }
 
 int wifiMaster_ParseResponse(const char *response, const char *expected) {
@@ -162,7 +161,7 @@ void hlk_rm58s_configure_WiFi_Module(void) {
     // 重启模块 — 直接发送, 不经过状态机 (模块会立即重启, 不返回ok)
     SEGGER_RTT_printf(0, ">> at+reconn=1\r\n");
     Uart_Task_WiFi.status = UTS_IDLE;  // 确保状态机空闲
-    HAL_UART_Transmit_DMA(&huart_wifi, (uint8_t*)"at+reconn=1\r\n", 13);
+    HAL_UART_Transmit_DMA(&huart_hlk, (uint8_t*)"at+reconn=1\r\n", 13);
     HAL_Delay(1000);  // 等待发送完成 + 模块接收
     SEGGER_RTT_printf(0, "Module rebooting, wait 3s...\n");
     HAL_Delay(3000);

@@ -1,41 +1,20 @@
 #ifndef __HLK_RM58S_DRIVER_H__
 #define __HLK_RM58S_DRIVER_H__
 
+#include "hlk_rm58s_port.h"
+#include "network_config.h"
+
 #define RESPONSE_TIMEOUT    2000
 
-// WiFi STA 模式
-#define WIFI_SSID          "USIDE-2F"
-#define WIFI_PASSWORD      "uside8888"
-#define WIFI_SECURITY      "wpa2_aes"
-
-// 网络模式选择
-#define NETWORK_MODE_STA    // STA模式（动态获取IP）
-// #define NETWORK_MODE_AP  // AP模式（模块当热点）
-
-// AP模式配置
-#define AP_IP_BASE         "192.168.31"
-#define AP_GATEWAY         "192.168.31.254"
-#define AP_NETMASK         "255.255.255.0"
-
-// DHCP 配置（AP）
-#define DHCP_START_IP      "192.168.31.1"
-#define DHCP_END_IP        "192.168.31.200"
-#define DHCP_DNS1          "192.168.31.254"
-#define DHCP_DNS2          "8.8.8.8"
-#define DHCP_LEASE_TIME    "86400"
-
-// 远程服务器
-#define REMOTE_IP          "192.168.31.144"
-#define REMOTE_PORT        "9998"
-#define PROTOCOL           "tcp"
-
-// 串口配置
-#define UART_BAUDRATE      "115200"
-#define UART_DATABITS      "8"
-#define UART_PARITY        "n"
-#define UART_STOPBITS      "1"
-#define UART_PACK_LEN      "64"
-#define UART_PACK_TIMEOUT  "10"
+/*===========================================================================
+ * UART Serial Port (HLK-RM58S communication)
+ *===========================================================================*/
+#define UART_BAUDRATE       "115200"
+#define UART_DATABITS       "8"
+#define UART_PARITY         "n"
+#define UART_STOPBITS       "1"
+#define UART_PACK_LEN       "64"
+#define UART_PACK_TIMEOUT   "10"
 
 // 超时
 #define CONNECTION_TIMEOUT "0"

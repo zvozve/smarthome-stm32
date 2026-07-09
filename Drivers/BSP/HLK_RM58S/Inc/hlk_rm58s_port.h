@@ -6,38 +6,17 @@
 #include <stdbool.h>
 #include "string.h"
 #include <math.h>
-
-#include "main.h"
-#include "gpio.h"
-#include "tim.h"
-#include "usart.h"
-#include "dma.h"
-
-
-#include <stdio.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include "string.h"
-#include <math.h>
 #include "stdarg.h"	 
 #include <ctype.h>
 
 #include "main.h"
-#include "dma.h"
+#include "gpio.h"
 #include "tim.h"
 #include "usart.h"
-#include "gpio.h"
-
+#include "dma.h"
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_uart.h"
-
-#include "my_uart.h"
-#include "my_tim.h"
-
 #include "SEGGER_RTT.h"
-
-#include "cJSON.h"
-
 
 /*
 ***********************************************
@@ -71,18 +50,18 @@
 ***********************************************
 */
 
-#define TIM_TP              TIM6
-#define htim_tp             htim6
-extern TIM_HandleTypeDef    htim_tp;
+#define TIM_HLK              TIM6
+#define htim_hlk             htim6
+extern TIM_HandleTypeDef     htim_hlk;
 
-#define TIM_TP_PERIOD_US    (1000)
-#define TIM_TP_MAX_DELAY    (1000 * 1000 / TIM_TP_PERIOD_US)
-#define TIM_TP_MAX_RETRY    (3)
+#define TIM_HLK_PERIOD_US    (1000)
+#define TIM_HLK_MAX_DELAY    (1000 * 1000 / TIM_HLK_PERIOD_US)
+#define TIM_HLK_MAX_RETRY    (3)
 
 extern volatile uint32_t us_count;
 
-void TIM_TP_Delay_us(uint16_t us);
-void TIM_TP_Delay_ms(uint16_t ms);
+void TIM_HLK_Delay_us(uint16_t us);
+void TIM_HLK_Delay_ms(uint16_t ms);
 
 /*
 ***********************************************
@@ -90,18 +69,13 @@ void TIM_TP_Delay_ms(uint16_t ms);
 ***********************************************
 */
 
-#define UART_WIFI               USART3
-#define huart_wifi              huart3
-extern UART_HandleTypeDef       huart_wifi;
-#define ENABLE_WIFI_TX_BLOCK    1
-extern Uart_Task_t              Uart_Task_WiFi;
-
 #define UART_ENABLE_DMACPY      0
 #define UART_ENABLE_RTT_PRINTF  1
-
 #define UART_BUF_LEN 1024
 
-#endif // __HLK_RM58S_PORT_H
+#define UART_HLK               USART6
+#define huart_hlk              huart6
+extern UART_HandleTypeDef       huart_hlk;
 
 typedef enum {
     UTS_IDLE = 0x81,    // 空闲
@@ -141,6 +115,7 @@ typedef struct
     // 添加调试标识
     const char *debug_name;
 }Uart_Task_t;
+extern Uart_Task_t              Uart_Task_WiFi;
 
 #if UART_ENABLE_DMACPY
 /**
@@ -174,19 +149,4 @@ void USR_UART_Print_CMD(const char *idFormat, const char *sFormat, uint8_t *pCmd
 uint8_t USR_UART_Unstable(UART_HandleTypeDef *huart);
 void USR_UART_Repair(UART_HandleTypeDef *huart);
 
-#define USR_UART_BUFF_LEN 1024
-
-extern UART_HandleTypeDef huart6;
-
-typedef struct{
-    uint16_t tx_len;  //待发送数据长度
-    uint16_t rx_len;  //接收到的数据长度
-    uint8_t  tx_buf[USR_UART_BUFF_LEN];	// 发送数组
-    uint8_t  rx_buf[USR_UART_BUFF_LEN];	// 接收数组
-    bool     tx_idle;
-    bool     rx_idle;
-    void (*p_tx)(uint8_t data);	    // 发送函数指针
-    void (*p_rx)(uint8_t data);	// 解析函数指针
-}usr_uart_t;
-
-extern usr_uart_t usr_uart6;
+#endif // __HLK_RM58S_PORT_H

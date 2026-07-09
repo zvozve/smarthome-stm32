@@ -2,7 +2,7 @@
 #include "hlk_rm58s_driver.h"
 
 /* 外部变量声明 */
-extern UART_HandleTypeDef huart_wifi;
+extern UART_HandleTypeDef huart_hlk;
 extern Uart_Task_t Uart_Task_WiFi;
 
 void hlk_rm58s_init(void) {
@@ -15,13 +15,13 @@ void hlk_rm58s_init(void) {
     #endif // UART_ENABLE_DMACPY
 
     // 启动定时器轮询 10us
-    HAL_TIM_Base_Start_IT(&htim_tp);
+    HAL_TIM_Base_Start_IT(&htim_hlk);
 
     // 进入AT模式配置WiFi模块 (对照HLK-RM58S规格书)
     hlk_rm58s_connect(WIFI_MODE_STA);
 
     // 配置完成后启动DMA接收, 进入透传模式
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart_wifi, Uart_Task_WiFi.Rx_Buf, UART_BUF_LEN);
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart_hlk, Uart_Task_WiFi.Rx_Buf, UART_BUF_LEN);
 
     SEGGER_RTT_printf(0, "WiFi init done, entering transparent mode.\n");
 }
@@ -30,7 +30,7 @@ void hlk_rm58s_task(void) {
     // 透传模式: 每秒发送一次JSON状态报告
     build_json_message(jsonTxBuf, sizeof(jsonTxBuf));
     memcpy(wifiMaster.Tx.cmdBuf, jsonTxBuf, strlen(jsonTxBuf));
-    HAL_UART_Transmit_DMA(&huart_wifi, (uint8_t *)jsonTxBuf, strlen(jsonTxBuf));
+    HAL_UART_Transmit_DMA(&huart_hlk, (uint8_t *)jsonTxBuf, strlen(jsonTxBuf));
 
     SEGGER_RTT_printf(0, "Send JSON: %s\n", jsonTxBuf);
 
@@ -57,7 +57,7 @@ void wifiMaster_Poll(Uart_Task_t *task) {
         // 发送完成: 打开接收，开始计时
         case UTS_TX_CPLT:
             USR_UART_Receive_DMA(task);
-            task->timeout = TIM_TP_MAX_DELAY;
+            task->timeout = TIM_HLK_MAX_DELAY;
             task->retry   = 10;  // WiFi AT指令可能分多包返回(先回显再返回ok), 增加重试次数
         break;
         // 接收中：计时
@@ -94,7 +94,7 @@ void wifiMaster_Poll(Uart_Task_t *task) {
                 task->Rx_Byte = 0;
                 HAL_UARTEx_ReceiveToIdle_DMA(task->Port, task->Rx_Buf, UART_BUF_LEN);
                 task->status = UTS_RX_ING;
-                task->timeout = TIM_TP_MAX_DELAY;
+                task->timeout = TIM_HLK_MAX_DELAY;
             } else {
                 // 重试用尽, 超时
                 SEGGER_RTT_printf(0, "RX accumulate timeout!\n");
@@ -143,8 +143,7 @@ void USR_UART_Print_STA(const char *sFormat, uart_Status_e mbtStatus, wifiStatus
 }
 
 // 中断处理函数
-void TIM3_IRQHandler(void) {
-    HAL_TIM_IRQHandler(&htim_tp);
+void HLK_TIMx_IRQHandler(void) {
     us_count ++;
     // SEGGER_RTT_printf(0, "TIM6_DAC_IRQHandler %d\n", us_count); 
     wifiMaster_Poll(&Uart_Task_WiFi);

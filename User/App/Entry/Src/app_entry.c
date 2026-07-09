@@ -1,6 +1,7 @@
 #include "app_entry.h"
 #include "SEGGER_RTT.h"
 #include "wol.h"
+#include "hlk_rm58s_app.h"
 
 extern ETH_HandleTypeDef heth;
 
@@ -20,6 +21,8 @@ void App_Init(void)
 {
   SEGGER_RTT_Init();
   SEGGER_RTT_printf(0, "[APP] System initializing...\n");
+  hlk_rm58s_init();
+  hlk_rm58s_task();
 }
 
 void App_CreateTask(void) 
