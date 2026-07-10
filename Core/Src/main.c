@@ -27,7 +27,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "app_entry.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -96,7 +95,6 @@ int main(void)
   MX_USART6_UART_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
-  userApp_Init();
   /* USER CODE END 2 */
 
   /* Init scheduler */

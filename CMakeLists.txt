@@ -47,8 +47,15 @@ file(GLOB_RECURSE USER_SOURCES
     "User/Hardware/hlk_rm58s/Src/*.c"
     "User/Hardware/lan8720a/Src/*.c"
     "User/Protocols/cJSON/Src/*.c"
+    "User/Protocols/mqtt/Src/*.c"
     "User/Protocols/SEGGER_RTT/Src/*.c"
     "User/Protocols/wol/Src/*.c"
+    "User/Tasks/Src/*.c"
+)
+
+# 排除示例文件
+list(REMOVE_ITEM USER_SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/User/Hardware/hlk_rm58s/Src/hlk_rm58s_user_example.c"
 )
 
 # Add sources to executable
@@ -65,8 +72,10 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User/Hardware/hlk_rm58s/Inc
     User/Hardware/lan8720a/Inc
     User/Protocols/cJSON/Inc
+    User/Protocols/mqtt/Inc
     User/Protocols/SEGGER_RTT/Inc
     User/Protocols/wol/Inc
+    User/Tasks/Inc
 )
 
 # Add project symbols (macros)
@@ -83,3 +92,11 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
     # Add user defined libraries
 )
+
+# 排除 LwIP 的 MQTT 源码（避免与手写冲突）
+if(TARGET LwIP)
+    get_target_property(LWIP_SOURCES LwIP SOURCES)
+    list(FILTER LWIP_SOURCES EXCLUDE REGEX "/apps/mqtt/mqtt\\.c$")
+    set_target_properties(LwIP PROPERTIES SOURCES "${LWIP_SOURCES}")
+    message(STATUS "Excluded LwIP mqtt.c to avoid conflict")
+endif()
