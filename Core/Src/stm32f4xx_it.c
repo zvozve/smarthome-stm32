@@ -22,6 +22,8 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "hlk_rm58s_port.h"
+#include "hlk_rm58s_driver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -188,6 +190,7 @@ void TIM6_DAC_IRQHandler(void)
   /* USER CODE END TIM6_DAC_IRQn 0 */
   HAL_TIM_IRQHandler(&htim6);
   /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
+  HLK_TIMX_IRQHandler(&htim_hlk);
   /* USER CODE END TIM6_DAC_IRQn 1 */
 }
 
@@ -248,5 +251,12 @@ void USART6_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
+  HLK_UART_TxCpltCallback(huart);
+}
 
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+  HLK_UARTEx_RxEventCallback(huart, Size);
+}
 /* USER CODE END 1 */

@@ -120,7 +120,7 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    APP_LOG("Free heap: %d\r\n", xPortGetFreeHeapSize());
+    // APP_LOG("Free heap: %d\r\n", xPortGetFreeHeapSize());
     HAL_GPIO_TogglePin(CPU_STA_GPIO_Port, CPU_STA_Pin);
     osDelay(500);
   }

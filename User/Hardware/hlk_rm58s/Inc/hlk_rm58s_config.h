@@ -2,16 +2,32 @@
 #define __HLK_RM58S_CONFIG_H
 
 // ===========================
-// 驱动内部配置（用户一般不需要修改）
+// WiFi STA 模式配置
 // ===========================
+#define WIFI_SSID          "USIDE-2F"
+#define WIFI_PASSWORD      "uside8888"
+#define WIFI_SECURITY      "wpa2_aes"
 
-#define HLK_RX_BUF_SIZE         1024
-#define HLK_AT_RESP_BUF_SIZE    512
-#define HLK_CMD_BUF_SIZE        256
+// ===========================
+// 远程服务器
+// ===========================
+#define REMOTE_IP          "192.168.31.144"
+#define REMOTE_PORT        "9998"
+#define PROTOCOL           "tcp"
 
-#define HLK_AT_TIMEOUT_DEFAULT      2000
-#define HLK_CONNECT_TIMEOUT_DEFAULT 10000
-#define HLK_RESET_HOLD_MS           600
-#define HLK_AT_ENTER_HOLD_MS        1200
+// ===========================
+// 串口配置
+// ===========================
+#define UART_BAUDRATE      "115200"
+#define UART_DATABITS      "8"
+#define UART_PARITY        "n"
+#define UART_STOPBITS      "1"
+#define UART_PACKLEN       "512"
+#define UART_PACKTIMEOUT   "20"
+// ===========================
+// AP模式配置（备选）
+// ===========================
+#define AP_GATEWAY         "192.168.31.254"
+#define AP_NETMASK         "255.255.255.0"
 
-#endif /* __HLK_RM58S_CONFIG_H */
+#endif // __HLK_RM58S_CONFIG_H

@@ -1,15 +1,18 @@
 #include "app_main.h"
+// Hardware
 #include "lan8720a_port.h"
+#include "hlk_rm58s_client.h" 
+// Protocols
 #include "wol.h"
+// Tasks
 #include "task_wifi.h"
 #include "task_mqtt.h"
-#include "hlk_rm58s_rtos.h"
 
 // ===========================
 // 任务句柄定义
 // ===========================
 
-osThreadId_t wolTaskHandle;
+osThreadId_t appTaskHandle;
 osThreadId_t wifiTaskHandle;
 osThreadId_t wifiPollTaskHandle;
 osThreadId_t mqttTaskHandle;
@@ -19,8 +22,8 @@ osThreadId_t mqttTaskHandle;
 // ===========================
 
 // // 默认任务（WOL）
-// static const osThreadAttr_t wolTask_attrs = {
-//     .name = "wolTask",
+// static const osThreadAttr_t appTask_attrs = {
+//     .name = "appTask",
 //     .stack_size = 256 * 4,
 //     .priority = (osPriority_t) osPriorityNormal,
 // };
@@ -31,13 +34,6 @@ static const osThreadAttr_t wifiTask_attrs = {
     .stack_size = 1024 * 4,
     .priority = (osPriority_t) osPriorityNormal3,
 };
-
-// // WiFi轮询任务
-// static const osThreadAttr_t wifiPollTask_attrs = {
-//     .name = "wifiPollTask",
-//     .stack_size = 256 * 4,
-//     .priority = (osPriority_t) osPriorityLow,
-// };
 
 // // MQTT任务
 // static const osThreadAttr_t mqttTask_attrs = {
@@ -50,7 +46,7 @@ static const osThreadAttr_t wifiTask_attrs = {
 // 函数声明
 // ===========================
 
-void wolTask(void *argument);
+void appTask(void *argument);
 
 // ===========================
 // 硬件初始化
@@ -64,6 +60,7 @@ void app_main_init(void)
 {
     SEGGER_RTT_Init();
     APP_LOG("System initializing...\n");
+    APP_LOG("FIRMWARE_VERSION %s\n", FIRMWARE_VERSION);
 
     // 1. 硬件初始化
     LAN_HardwareReset();
@@ -79,11 +76,11 @@ void app_main_init(void)
 void app_main_create_tasks(void)
 {
     // // 默认任务（WOL）
-    // wolTaskHandle = osThreadNew(wolTask, NULL, &wolTask_attrs);
-    // if (wolTaskHandle == NULL) {
-    //     APP_LOG("Failed to create wolTask\n");
+    // appTaskHandle = osThreadNew(appTask, NULL, &appTask_attrs);
+    // if (appTaskHandle == NULL) {
+    //     APP_LOG("Failed to create appTask\n");
     // } else {
-    //     APP_LOG("wolTask created\n");
+    //     APP_LOG("appTask created\n");
     // }
 
     // WiFi管理任务
@@ -93,14 +90,6 @@ void app_main_create_tasks(void)
     } else {
         APP_LOG("wifiTask created\n");
     }
-
-    // // WiFi轮询任务（驱动自带）
-    // wifiPollTaskHandle = osThreadNew(hlk_rm58s_poll_task, NULL, &wifiPollTask_attrs);
-    // if (wifiPollTaskHandle == NULL) {
-    //     APP_LOG("Failed to create WiFi poll task\n");
-    // } else {
-    //     APP_LOG("WiFi poll task created\n");
-    // }
 
     // // MQTT任务
     // mqttTaskHandle = osThreadNew(task_mqtt, NULL, &mqttTask_attrs);
@@ -117,7 +106,7 @@ void app_main_create_tasks(void)
 // 默认任务（WOL功能）
 // ===========================
 
-void wolTask(void *argument)
+void appTask(void *argument)
 {
     (void)argument;
 

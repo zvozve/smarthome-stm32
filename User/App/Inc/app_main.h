@@ -6,6 +6,11 @@
 #include "SEGGER_RTT.h"
 
 // ===========================
+// 固件版本
+// ===========================
+#define FIRMWARE_VERSION  "V1.0.1/2026-07-15"
+
+// ===========================
 // 调试宏
 // ===========================
 
@@ -21,7 +26,7 @@
 // 任务句柄
 // ===========================
 
-extern osThreadId_t wolTaskHandle;
+extern osThreadId_t appTaskHandle;
 extern osThreadId_t wifiTaskHandle;
 extern osThreadId_t wifiPollTaskHandle;
 extern osThreadId_t mqttTaskHandle;

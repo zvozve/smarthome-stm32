@@ -3,15 +3,19 @@
 #include "mqtt_client.h"
 #include "mqtt_transport.h"
 #include "cJSON.h"
+#include "hlk_rm58s_port.h"
+#include "hlk_rm58s_driver.h"
+#include "hlk_rm58s_client.h"
 
-#include <string.h>          // ← 添加
-#include <stdlib.h>          // ← 添加
+#include <string.h>
+#include <stdlib.h>
 
+#if HLK_USE_RTOS
 #include "FreeRTOS.h"
 #include "task.h"
-#include "SEGGER_RTT.h"
+#endif
 
-#define MQTT_TASK_LOG(fmt, ...) SEGGER_RTT_printf(0, "[MQTT] " fmt, ##__VA_ARGS__)
+#define MQTT_TASK_LOG(fmt, ...) HLK_LOG("[MQTT] " fmt, ##__VA_ARGS__)
 
 static mqtt_client_t mqtt_client;
 static bool mqtt_ready = false;
@@ -65,12 +69,19 @@ void task_mqtt(void *argument) {
 
     while (1) {
         if (!mqtt_ready || !mqtt_client_is_connected(&mqtt_client)) {
+            // 等待 WiFi 就绪
+            if (!HLK_Client_IsReady()) {
+                MQTT_TASK_LOG("Waiting for WiFi...\n");
+                HLK_Delay_ms(2000);
+                continue;
+            }
+            
             MQTT_TASK_LOG("Connecting to MQTT broker...\n");
             if (mqtt_client_connect(&mqtt_client, MQTT_BROKER_ADDR, MQTT_BROKER_PORT, &config) == 0) {
                 MQTT_TASK_LOG("MQTT connected!\n");
             } else {
                 MQTT_TASK_LOG("MQTT connect failed, retry in 5s\n");
-                vTaskDelay(pdMS_TO_TICKS(5000));
+                HLK_Delay_ms(5000);
                 continue;
             }
         }
@@ -78,11 +89,11 @@ void task_mqtt(void *argument) {
         mqtt_client_loop(&mqtt_client);
 
         static uint32_t last_report = 0;
-        if (mqtt_ready && (xTaskGetTickCount() - last_report > pdMS_TO_TICKS(10000))) {
-            last_report = xTaskGetTickCount();
+        if (mqtt_ready && (HLK_GET_TICK() - last_report > 10000)) {
+            last_report = HLK_GET_TICK();
         }
 
-        vTaskDelay(pdMS_TO_TICKS(10));
+        HLK_Delay_ms(10);
     }
 }
 
