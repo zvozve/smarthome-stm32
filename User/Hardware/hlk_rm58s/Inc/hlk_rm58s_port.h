@@ -10,7 +10,7 @@
 // ===========================
 // 驱动版本
 // ===========================
-#define HLK_DRIVER_VERSION  "V1.0.0/2026-07-15"
+#define HLK_DRIVER_VERSION  "V2.0.0/2026-07-16"
 
 // ===========================
 // RTOS开关（放在这里）
@@ -76,12 +76,5 @@
 
 extern UART_HandleTypeDef   huart_hlk;
 extern TIM_HandleTypeDef    htim_hlk;
-
-// ===========================
-// 定时器配置
-// ===========================
-#define HLK_TIM_PERIOD_US   (1000)
-#define HLK_MAX_DELAY_MS    (1000 * 1000 / HLK_TIM_PERIOD_US)
-#define HLK_MAX_RERTY       (3)
 
 #endif // __HLK_RM58S_PORT_H

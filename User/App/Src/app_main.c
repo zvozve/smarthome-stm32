@@ -1,12 +1,11 @@
 #include "app_main.h"
 // Hardware
 #include "lan8720a_port.h"
-#include "hlk_rm58s_client.h" 
+#include "task_uart_test.h"
+#include "hlk_rm58s_manager.h"
 // Protocols
 #include "wol.h"
 // Tasks
-#include "task_wifi.h"
-#include "task_mqtt.h"
 
 // ===========================
 // 任务句柄定义
@@ -26,20 +25,6 @@ osThreadId_t mqttTaskHandle;
 //     .name = "appTask",
 //     .stack_size = 256 * 4,
 //     .priority = (osPriority_t) osPriorityNormal,
-// };
-
-// WiFi管理任务
-static const osThreadAttr_t wifiTask_attrs = {
-    .name = "wifiTask",
-    .stack_size = 1024 * 4,
-    .priority = (osPriority_t) osPriorityNormal3,
-};
-
-// // MQTT任务
-// static const osThreadAttr_t mqttTask_attrs = {
-//     .name = "mqttTask",
-//     .stack_size = 1024 * 4,
-//     .priority = (osPriority_t) osPriorityNormal2,
 // };
 
 // ===========================
@@ -83,21 +68,10 @@ void app_main_create_tasks(void)
     //     APP_LOG("appTask created\n");
     // }
 
-    // WiFi管理任务
-    wifiTaskHandle = osThreadNew(task_wifi, NULL, &wifiTask_attrs);
-    if (wifiTaskHandle == NULL) {
-        APP_LOG("Failed to create WiFi task\n");
-    } else {
-        APP_LOG("wifiTask created\n");
-    }
+    // uart_test_init();
 
-    // // MQTT任务
-    // mqttTaskHandle = osThreadNew(task_mqtt, NULL, &mqttTask_attrs);
-    // if (mqttTaskHandle == NULL) {
-    //     APP_LOG("Failed to create MQTT task\n");
-    // } else {
-    //     APP_LOG("MQTT task created\n");
-    // }
+    HLK_Manager_Init();
+
 
     APP_LOG("All tasks created\n");
 }
