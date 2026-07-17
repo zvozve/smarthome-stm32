@@ -26,13 +26,14 @@
  * Remote Server (HLK-RM58S transparent TCP target)
  *===========================================================================*/
 #define REMOTE_IP           "192.168.31.144"
-#define REMOTE_PORT         "9998"
+// #define REMOTE_PORT         "9998"
+#define REMOTE_PORT         "1883"
 #define PROTOCOL            "tcp"
 
 /*===========================================================================
  * MQTT Broker (via LwIP Ethernet stack)
  *===========================================================================*/
-#define MQTT_BROKER_ADDR    "192.168.31.144"
+#define MQTT_BROKER_IP      "192.168.31.144"
 #define MQTT_BROKER_PORT    1883
 #define MQTT_CLIENT_ID      "STM32_Client_001"
 #define MQTT_USERNAME       "STM32"

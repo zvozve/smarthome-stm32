@@ -20,6 +20,13 @@ typedef void (*mgr_rx_callback_t)(const uint8_t* data, uint16_t len);
 typedef void (*mgr_status_callback_t)(hlk_mgr_status_t status);
 
 // ===========================
+// 回调注册接口（新增）
+// ===========================
+int HLK_Manager_RegisterRxCallback(mgr_rx_callback_t callback);
+int HLK_Manager_UnregisterRxCallback(mgr_rx_callback_t callback);
+void HLK_Manager_RegisterStatusCallback(mgr_status_callback_t callback);
+
+// ===========================
 // 对外接口
 // ===========================
 void HLK_Manager_Init(void);

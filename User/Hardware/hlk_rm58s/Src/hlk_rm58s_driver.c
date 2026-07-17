@@ -22,7 +22,7 @@ void HLK_GPIO_EnterATMode(void) {
     WIFI_ES_LOW();
     HLK_Delay_ms(100);
     WIFI_ES_HIGH();
-    HLK_Delay_ms(200);
+    HLK_Delay_ms(100);
     HLK_LOG("EnterATMode\n");
 }
 
@@ -31,7 +31,7 @@ void HLK_GPIO_ActiveReset(void) {
     HLK_Delay_ms(600);
     WIFI_RST_HIGH();
     // 手册要求：复位后需要等待模块启动
-    HLK_Delay_ms(500);  // 增加复位后等待
+    HLK_Delay_ms(100);  // 增加复位后等待
     HLK_LOG("ActiveReset done\n");
 }
 

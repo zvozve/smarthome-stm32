@@ -13,12 +13,11 @@
 // ===========================
 // 配置
 // ===========================
-#define HLK_LINK_RERTY          30
-#define HLK_LINK_CHECK_INTERVAL 1000
+#define HLK_MAX_RX_CALLBACKS    4           // 最大回调数（新增）
+#define HLK_RECONFIG_WAIT       5000
 #define HLK_RECONNECT_RETRY     3
-#define HLK_POWER_ON_WAIT       5000
-#define HLK_RECONFIG_WAIT       10000
-#define HLK_OFFLINE_RETRY_MS    30000
+#define HLK_LINK_CHECK_INTERVAL 1000
+#define HLK_LINK_RERTY          20
 
 // ===========================
 // AT指令项
@@ -47,7 +46,7 @@ static const at_cmd_t wifi_cmds[] = {
     {AT_UARTPACKLEN,            "ok", 3000, 3},
     {AT_UARTPACKTIMEOUT,        "ok", 3000, 3},
     {AT_NET_COMMIT,             "ok", 5000, 5},
-    // {AT_RECONN,                 NULL, 2000, 2},
+    // {AT_RECONN,                 "ok", 2000, 2},
 };
 
 #define CMD_COUNT (sizeof(wifi_cmds) / sizeof(at_cmd_t))
@@ -73,7 +72,6 @@ static struct {
     struct {
         bool active;
         uint32_t start_tick;
-        bool first_connect;
     } wait;
     
     // 连接检测
@@ -88,9 +86,12 @@ static struct {
         uint32_t offline_start_tick;
     } reconnect;
     
-    // 回调
-    mgr_rx_callback_t rx_callback;
-    mgr_status_callback_t status_callback;
+    // 回调列表（修改：单个回调 → 回调列表）
+    struct {
+        mgr_rx_callback_t rx_callbacks[HLK_MAX_RX_CALLBACKS];
+        uint8_t rx_count;
+        mgr_status_callback_t status_callback;
+    } cb;
     
     TaskHandle_t task_handle;
     bool initialized;
@@ -105,7 +106,7 @@ static void mgr_state_disconnected(void);
 static void mgr_state_connected(void);
 
 static void mgr_start_config(void);
-static void mgr_start_wait(bool first_connect);
+static void mgr_start_wait(void);
 static void mgr_send_next_cmd(void);
 static void mgr_handle_response(void);
 static void mgr_update_status(hlk_mgr_status_t status);
@@ -131,10 +132,12 @@ static void on_rx(uint8_t *data, uint16_t len) {
         return;
     }
     
-    // 已连接模式下透传数据
+    // 已连接模式下：分发给所有注册的任务
     if (mgr.status == HLK_MGR_CONNECTED) {
-        if (mgr.rx_callback) {
-            mgr.rx_callback(data, len);
+        for (int i = 0; i < mgr.cb.rx_count; i++) {
+            if (mgr.cb.rx_callbacks[i]) {
+                mgr.cb.rx_callbacks[i](data, len);
+            }
         }
         return;
     }
@@ -167,8 +170,8 @@ static void mgr_update_status(hlk_mgr_status_t status) {
         HLK_LOG("mgr_update_status: %s -> %s\n", 
                 mgr_status_str(mgr.status), mgr_status_str(status));
         mgr.status = status;
-        if (mgr.status_callback) {
-            mgr.status_callback(status);
+        if (mgr.cb.status_callback) {
+            mgr.cb.status_callback(status);
         }
     }
 }
@@ -208,9 +211,6 @@ static void mgr_send_next_cmd(void) {
         
         // 硬件复位
         HLK_GPIO_ActiveReset();
-
-        // 2. 等待重启完成
-        HLK_Delay_ms(2000);
                 
         // 4. 进入未连接状态
         HLK_LOG("Config complete, enter DISCONNECTED\n");
@@ -294,7 +294,7 @@ static void mgr_state_configuring(void) {
     // 等待模块稳定
     if (mgr.wait.active) {
         uint32_t elapsed = HLK_GET_TICK() - mgr.wait.start_tick;
-        uint32_t wait_time = mgr.wait.first_connect ? HLK_POWER_ON_WAIT : HLK_RECONFIG_WAIT;
+        uint32_t wait_time = HLK_RECONFIG_WAIT;
         
         if (elapsed >= wait_time) {
             HLK_LOG("Wait complete, start AT config\n");
@@ -384,26 +384,25 @@ static void mgr_start_config(void) {
     
     // 增加失败计数
     mgr.reconnect.fail_count++;
+    HLK_LOG("Reconnect fail %d / %d times, offline\n", mgr.reconnect.fail_count, HLK_RECONNECT_RETRY);
     if (mgr.reconnect.fail_count >= HLK_RECONNECT_RETRY) {
-        HLK_LOG("Reconnect fail %d times, offline\n", HLK_RECONNECT_RETRY);
+        mgr.reconnect.fail_count = 0;
         mgr_update_status(HLK_MGR_DISCONNECTED);
         mgr.reconnect.offline_start_tick = HLK_GET_TICK();
+        // 进入配置状态，等待稳定
+        mgr_update_status(HLK_MGR_CONFIGURING);
+        mgr_start_wait();
         return;
-    }
-    
-    // 进入配置状态，等待稳定
-    mgr_update_status(HLK_MGR_CONFIGURING);
-    mgr_start_wait(false);
+    }    
 }
 
 // ===========================
 // 开始等待稳定
 // ===========================
-static void mgr_start_wait(bool first_connect) {
+static void mgr_start_wait(void) {
     mgr.wait.active = true;
     mgr.wait.start_tick = HLK_GET_TICK();
-    mgr.wait.first_connect = first_connect;
-    HLK_LOG("Wait stable: first=%d\n", first_connect);
+    HLK_LOG("Wait stable...\n");
 }
 
 // ===========================
@@ -420,7 +419,7 @@ static void mgr_task(void *arg) {
     
     // 首次上电
     mgr_update_status(HLK_MGR_CONFIGURING);
-    mgr_start_wait(true);
+    mgr_start_wait();
     mgr.reconnect.fail_count = 0;
     
     HLK_LOG("Enter main loop\n");
@@ -443,6 +442,45 @@ static void mgr_task(void *arg) {
         }
         HLK_Delay_ms(50);
     }
+}
+
+// ===========================
+// 回调注册接口
+// ===========================
+int HLK_Manager_RegisterRxCallback(mgr_rx_callback_t callback) {
+    if (!callback) return -1;
+    if (mgr.cb.rx_count >= HLK_MAX_RX_CALLBACKS) return -2;
+    
+    for (int i = 0; i < mgr.cb.rx_count; i++) {
+        if (mgr.cb.rx_callbacks[i] == callback) {
+            return -3;  // 已注册
+        }
+    }
+    
+    mgr.cb.rx_callbacks[mgr.cb.rx_count++] = callback;
+    HLK_LOG("Manager: RegisterRx count=%d\n", mgr.cb.rx_count);
+    return 0;
+}
+
+int HLK_Manager_UnregisterRxCallback(mgr_rx_callback_t callback) {
+    if (!callback) return -1;
+    
+    for (int i = 0; i < mgr.cb.rx_count; i++) {
+        if (mgr.cb.rx_callbacks[i] == callback) {
+            for (int j = i; j < mgr.cb.rx_count - 1; j++) {
+                mgr.cb.rx_callbacks[j] = mgr.cb.rx_callbacks[j + 1];
+            }
+            mgr.cb.rx_count--;
+            mgr.cb.rx_callbacks[mgr.cb.rx_count] = NULL;
+            return 0;
+        }
+    }
+    return -2;
+}
+
+void HLK_Manager_RegisterStatusCallback(mgr_status_callback_t callback) {
+    mgr.cb.status_callback = callback;
+    HLK_LOG("Manager: RegisterStatus callback\n");
 }
 
 // ===========================
