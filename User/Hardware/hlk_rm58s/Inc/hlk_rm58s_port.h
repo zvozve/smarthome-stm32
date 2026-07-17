@@ -7,6 +7,8 @@
 #include "usart.h"
 #include "gpio.h"
 
+#include <stdio.h>
+
 // ===========================
 // 驱动版本
 // ===========================
@@ -41,10 +43,31 @@
 
 #if HLK_LOG_ENABLE
     #include "SEGGER_RTT.h"
+    
+    // 时间戳格式化函数
+    static inline void hlk_log_format_time(uint32_t tick, char *buf, size_t buf_size) {
+        uint32_t ms = tick;
+        uint32_t hours = ms / 3600000;
+        ms -= hours * 3600000;
+        uint32_t minutes = ms / 60000;
+        ms -= minutes * 60000;
+        uint32_t seconds = ms / 1000;
+        ms -= seconds * 1000;
+        
+        if (hours > 0) {
+            // 格式: HH:MM:SS.mmm (最多99小时)
+            snprintf(buf, buf_size, "%02lu:%02lu:%02lu.%03lu", hours, minutes, seconds, ms);
+        } else {
+            // 格式: MM:SS.mmm
+            snprintf(buf, buf_size, "%02lu:%02lu.%03lu", minutes, seconds, ms);
+        }
+    }
+    
     #define HLK_LOG(fmt, ...) \
         do { \
-            uint32_t _tick = HLK_GET_TICK(); \
-            SEGGER_RTT_printf(0, "[%lu][HLK] " fmt, _tick, ##__VA_ARGS__); \
+            char _time_buf[16]; \
+            hlk_log_format_time(HLK_GET_TICK(), _time_buf, sizeof(_time_buf)); \
+            SEGGER_RTT_printf(0, "[%s][HLK] " fmt, _time_buf, ##__VA_ARGS__); \
         } while(0)
 #else
     #define HLK_LOG(fmt, ...)   ((void)0)

@@ -16,19 +16,22 @@ void HLK_GPIO_Init(void) {
     HLK_LOG("GPIOInit done\n");
 }
 
-void HLK_GPIO_ActiveATMode(void) {
+// 进入AT模式：拉低ES0
+// 手册要求：拉低 ≥ 50ms 进入AT模式
+void HLK_GPIO_EnterATMode(void) {
     WIFI_ES_LOW();
-    HLK_Delay_ms(1200);
+    HLK_Delay_ms(100);
     WIFI_ES_HIGH();
     HLK_Delay_ms(200);
-    HLK_LOG("ActiveATMode done\n");
+    HLK_LOG("EnterATMode\n");
 }
 
 void HLK_GPIO_ActiveReset(void) {
     WIFI_RST_LOW();
     HLK_Delay_ms(600);
     WIFI_RST_HIGH();
-    HLK_Delay_ms(2000);
+    // 手册要求：复位后需要等待模块启动
+    HLK_Delay_ms(500);  // 增加复位后等待
     HLK_LOG("ActiveReset done\n");
 }
 

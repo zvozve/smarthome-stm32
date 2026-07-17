@@ -60,11 +60,10 @@ void HLK_Driver_RegisterCallbacks(
 // GPIO
 // ===========================
 void HLK_GPIO_Init(void);
-void HLK_GPIO_ActiveATMode(void);
+void HLK_GPIO_EnterATMode(void);
 void HLK_GPIO_ActiveReset(void);
 void HLK_GPIO_ActiveRecoveryMode(void);
 
-// ===========================
 // HAL 回调
 // ===========================
 void HLK_UART_TxCpltCallback(UART_HandleTypeDef *huart);
