@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "network_config.h"
+#include "mqtt_codec.h" 
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,17 +43,6 @@ typedef enum {
     MQTT_TASK_READY,
     MQTT_TASK_ERROR,
 } mqtt_task_state_t;
-
-// ===========================
-// 业务数据类型
-// ===========================
-typedef struct {
-    float temperature;
-    float humidity;
-    uint8_t led_state;
-    uint8_t relay_state;
-    uint32_t uptime;
-} device_status_t;
 
 typedef struct {
     char cmd[32];
