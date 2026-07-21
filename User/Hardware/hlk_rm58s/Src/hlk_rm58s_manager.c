@@ -46,7 +46,7 @@ static const at_cmd_t wifi_cmds[] = {
     {AT_UARTPACKLEN,            "ok", 3000, 3},
     {AT_UARTPACKTIMEOUT,        "ok", 3000, 3},
     {AT_NET_COMMIT,             "ok", 5000, 5},
-    // {AT_RECONN,                 "ok", 2000, 2},
+    {AT_RECONN,                 "ok", 2000, 2},
 };
 
 #define CMD_COUNT (sizeof(wifi_cmds) / sizeof(at_cmd_t))
@@ -126,6 +126,7 @@ static void on_rx(uint8_t *data, uint16_t len) {
                 memcpy(mgr.config.response + mgr.config.response_len, data, len);
                 mgr.config.response_len += len;
                 mgr.config.response[mgr.config.response_len] = '\0';
+                // HLK_LOG("RX %s\n", mgr.config.response);
                 mgr.config.last_rx_tick = HLK_GET_TICK();
             }
         }
@@ -203,11 +204,11 @@ static void mgr_send_next_cmd(void) {
     if (mgr.config.cmd_index >= CMD_COUNT) {
         // 所有AT命令发送完成
         
-        // 1. 发送重启命令退出AT模式
-        HLK_LOG("All config done, send reconn\n");
-        char tx_buf[32];
-        snprintf(tx_buf, sizeof(tx_buf), "at+reconn=1\r\n");
-        HLK_Driver_Send((uint8_t*)tx_buf, strlen(tx_buf));
+        // // 1. 发送重启命令退出AT模式
+        // HLK_LOG("All config done, send reconn\n");
+        // char tx_buf[32];
+        // snprintf(tx_buf, sizeof(tx_buf), "at+reconn=1\r\n");
+        // HLK_Driver_Send((uint8_t*)tx_buf, strlen(tx_buf));
         
         // 硬件复位
         HLK_GPIO_ActiveReset();
@@ -423,6 +424,14 @@ static void mgr_task(void *arg) {
     mgr.reconnect.fail_count = 0;
     
     HLK_LOG("Enter main loop\n");
+    
+#if 0
+    HLK_GPIO_ActiveRecoveryMode();
+    while (1) {
+        HLK_LOG("WHILE(1)\n");
+        HLK_Delay_ms(1000);
+    }
+#else 
     while (1) {
         switch (mgr.status) {
             case HLK_MGR_CONFIGURING:
@@ -442,6 +451,7 @@ static void mgr_task(void *arg) {
         }
         HLK_Delay_ms(50);
     }
+#endif     
 }
 
 // ===========================
