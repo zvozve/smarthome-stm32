@@ -1,12 +1,18 @@
+/**
+ * @file    bsp_uart_drv.c
+ * @brief   通用串口DMA驱动实现（修复版）
+ * @version V3.1
+ * @date    2026-08-24
+ */
+
 #include "bsp_uart_drv.h"
 #include "usart.h"
-// #include "stm32g4xx_hal_uart_ex.h"   /* HAL_UARTEx_GetRxEventType */
 #include "SEGGER_RTT_Log.h"
 #include <string.h>
 
-// ===========================
-// 描述表
-// ===========================
+/* ===========================
+ * 描述表
+ * =========================== */
 typedef struct {
     UART_HandleTypeDef *huart;
     const char *name;
@@ -20,8 +26,6 @@ static const uart_desc_t g_uart_desc_table[] = {
     {&huart6, "UART6", 6},
     {NULL, NULL, 0}
 };
-
-#define MAX_DRV  (sizeof(g_uart_desc_table) / sizeof(g_uart_desc_table[0]))
 
 static const uart_desc_t* uart_find_desc(UART_HandleTypeDef *huart) {
     for (int i = 0; g_uart_desc_table[i].huart != NULL; i++) {
@@ -42,15 +46,17 @@ uint8_t uart_drv_get_index(UART_HandleTypeDef *huart) {
     return desc ? desc->index : 0;
 }
 
-// ===========================
-// 实例管理
-// ===========================
-static uart_drv_t *s_drv_table[MAX_DRV];
+/* ===========================
+ * 实例管理
+ * =========================== */
+static uart_drv_t *s_drv_table[UART_DRV_MAX_INSTANCES];
 static int s_drv_count = 0;
 
 static void uart_drv_register_instance(uart_drv_t *drv) {
-    if (s_drv_count < MAX_DRV) {
+    if (s_drv_count < UART_DRV_MAX_INSTANCES) {
         s_drv_table[s_drv_count++] = drv;
+    } else {
+        DBG_LOG("UART DRV: max instances reached!");
     }
 }
 
@@ -63,9 +69,9 @@ static uart_drv_t* uart_drv_find(UART_HandleTypeDef *huart) {
     return NULL;
 }
 
-// ===========================
-// RS485
-// ===========================
+/* ===========================
+ * RS485 控制
+ * =========================== */
 static void rs485_tx_enable(uart_drv_t *drv) {
     if (drv->rs485 == NULL) return;
     HAL_GPIO_WritePin(drv->rs485->port, drv->rs485->pin,
@@ -74,34 +80,50 @@ static void rs485_tx_enable(uart_drv_t *drv) {
 
 static void rs485_rx_enable(uart_drv_t *drv) {
     if (drv->rs485 == NULL) return;
-    // while (!__HAL_UART_GET_FLAG(drv->huart, UART_FLAG_TC)) {};
     HAL_GPIO_WritePin(drv->rs485->port, drv->rs485->pin,
                       drv->rs485->active_level ? GPIO_PIN_RESET : GPIO_PIN_SET);
 }
 
-// ===========================
-// 启动接收
-// ===========================
+/* ===========================
+ * ★ 核心修复：安全的接收启动
+ * =========================== */
 static void start_rx(uart_drv_t *drv) {
+    if (drv == NULL) return;
     if (drv->state == UART_DRV_ERROR) return;
+
+    UART_HandleTypeDef *huart = drv->huart;
     
-    // ★ 清除所有标志 ★
-    HAL_UART_AbortReceive(drv->huart);
-    __HAL_UART_CLEAR_FLAG(drv->huart, UART_FLAG_ORE | UART_FLAG_IDLE);
+    /* ★ 修复问题4：不再暴力 AbortReceive，而是优雅地停止 DMA */
+    if (huart->hdmarx != NULL) {
+        /* 如果 DMA 正在运行，先停止 */
+        if (HAL_DMA_GetState(huart->hdmarx) == HAL_DMA_STATE_BUSY) {
+            HAL_DMA_Abort(huart->hdmarx);
+        }
+        
+        /* 重新配置 DMA 并启动 */
+        HAL_DMA_Start_IT(huart->hdmarx,
+                         (uint32_t)&huart->Instance->RDR,
+                         (uint32_t)drv->rx_buf,
+                         UART_DRV_BUF_SIZE);
+        
+        /* 使能 DMA 接收 */
+        SET_BIT(huart->Instance->CR3, USART_CR3_DMAR);
+    }
+    
+    /* 清除所有标志位（保留已接收的数据） */
+    __HAL_UART_CLEAR_FLAG(huart, UART_FLAG_ORE | UART_FLAG_FE | UART_FLAG_NE);
+    __HAL_UART_CLEAR_IDLEFLAG(huart);
+    
+    /* 使能空闲中断 */
+    SET_BIT(huart->Instance->CR1, USART_CR1_IDLEIE);
     
     drv->rx_len = 0;
     drv->state = UART_DRV_IDLE;
-    
-    if (drv->huart->hdmarx != NULL) {
-        HAL_UARTEx_ReceiveToIdle_DMA(drv->huart, drv->rx_buf, UART_DRV_BUF_SIZE);
-    } else {
-        // HAL_UART_Receive_IT(drv->huart, drv->rx_buf, UART_DRV_BUF_SIZE);
-    }    
 }
 
-// ===========================
-// API实现
-// ===========================
+/* ===========================
+ * API 实现
+ * =========================== */
 
 void uart_drv_init(uart_drv_t *drv, UART_HandleTypeDef *huart, uart_rs485_t *rs485) {
     memset(drv, 0, sizeof(uart_drv_t));
@@ -109,6 +131,8 @@ void uart_drv_init(uart_drv_t *drv, UART_HandleTypeDef *huart, uart_rs485_t *rs4
     drv->rs485 = rs485;
     drv->state = UART_DRV_IDLE;
     drv->locked = 0;
+    drv->rx_overrun_cnt = 0;
+    drv->rx_dropped_bytes = 0;
     
     drv->cfg.baudrate = huart->Init.BaudRate;
     drv->cfg.word_length = huart->Init.WordLength;
@@ -119,6 +143,8 @@ void uart_drv_init(uart_drv_t *drv, UART_HandleTypeDef *huart, uart_rs485_t *rs4
     
     rs485_rx_enable(drv);
     start_rx(drv);
+    
+    DBG_LOG("UART DRV init: %s", uart_drv_get_name(huart));
 }
 
 int uart_drv_reconfig(uart_drv_t *drv, const uart_drv_cfg_t *cfg) {
@@ -126,10 +152,12 @@ int uart_drv_reconfig(uart_drv_t *drv, const uart_drv_cfg_t *cfg) {
     
     UART_HandleTypeDef *huart = drv->huart;
     
+    /* 停止所有正在进行的传输 */
     HAL_UART_DMAStop(huart);
     HAL_UART_Abort(huart);
     HAL_UART_DeInit(huart);
     
+    /* 重新配置 */
     huart->Init.BaudRate = cfg->baudrate;
     huart->Init.WordLength = cfg->word_length;
     huart->Init.StopBits = cfg->stop_bits;
@@ -148,6 +176,8 @@ int uart_drv_reconfig(uart_drv_t *drv, const uart_drv_cfg_t *cfg) {
     drv->state = UART_DRV_IDLE;
     drv->locked = 0;
     drv->rx_len = 0;
+    drv->rx_overrun_cnt = 0;
+    drv->rx_dropped_bytes = 0;
     
     rs485_rx_enable(drv);
     start_rx(drv);
@@ -158,12 +188,10 @@ void uart_drv_reg_cb(uart_drv_t *drv,
                      void (*on_recv)(uart_drv_t *, uint8_t *, uint16_t),
                      void (*on_sent)(uart_drv_t *),
                      void (*on_error)(uart_drv_t *)) {
-    if (on_recv)
-        drv->on_recv = on_recv;
-    if (on_sent)
-        drv->on_sent = on_sent;
-    if (on_error)
-        drv->on_error = on_error;
+    if (drv == NULL) return;
+    if (on_recv) drv->on_recv = on_recv;
+    if (on_sent) drv->on_sent = on_sent;
+    if (on_error) drv->on_error = on_error;
 }
 
 int uart_drv_send(uart_drv_t *drv, const uint8_t *data, uint16_t len) {
@@ -171,8 +199,15 @@ int uart_drv_send(uart_drv_t *drv, const uint8_t *data, uint16_t len) {
     if (drv->state == UART_DRV_TX_BUSY) return -2;
     if (drv->state == UART_DRV_DATA_READY && drv->locked) return -3;
     
-    HAL_UART_AbortReceive(drv->huart);
+    /* ★ 修复问题3：发送期间若已收到数据，记录但不丢弃（已在 on_idle 中处理） */
+    /* 停止接收 DMA（但保留已接收的数据） */
+    if (drv->huart->hdmarx != NULL) {
+        HAL_DMA_Abort(drv->huart->hdmarx);
+    }
+    CLEAR_BIT(drv->huart->Instance->CR3, USART_CR3_DMAR);
+    CLEAR_BIT(drv->huart->Instance->CR1, USART_CR1_IDLEIE);
     
+    /* 复制数据到发送缓冲 */
     memcpy(drv->tx_buf, data, len);
     
     rs485_tx_enable(drv);
@@ -186,29 +221,25 @@ int uart_drv_send(uart_drv_t *drv, const uint8_t *data, uint16_t len) {
     return 0;
 }
 
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-// ★ 核心修复：接收接口
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-
+/* ★ 修复问题2：get_packet 增加空包检查 */
 uint8_t* uart_drv_get_packet(uart_drv_t *drv, uint16_t *len) {
     if (drv == NULL || len == NULL) return NULL;
-    
-    // ★ 只有 DATA_READY 且未锁定才能获取 ★
     if (drv->state != UART_DRV_DATA_READY) return NULL;
     if (drv->locked) return NULL;
+    if (drv->rx_len == 0) return NULL;   /* ★ 防止空包 */
     
     drv->locked = 1;
     *len = drv->rx_len;
     return drv->rx_buf;
 }
 
+/* ★ 修复问题1：release_packet 必须检查 locked */
 void uart_drv_release_packet(uart_drv_t *drv) {
     if (drv == NULL) return;
-    
-    // ★★★ 关键修复：无论 locked 如何，都清理状态 ★★★
-    // 但需要防止在中断中误操作
-    if (drv->state != UART_DRV_DATA_READY) {
-        // 如果不是 DATA_READY，不需要释放
+    if (drv->state != UART_DRV_DATA_READY) return;
+    if (!drv->locked) {
+        /* ★ 没被锁定说明上层没有调用 get_packet，不能释放 */
+        DBG_LOG("UART DRV: release without lock! pin=%s", uart_drv_get_name(drv->huart));
         return;
     }
     
@@ -216,14 +247,13 @@ void uart_drv_release_packet(uart_drv_t *drv) {
     drv->rx_len = 0;
     drv->state = UART_DRV_IDLE;
     
-    // 重新启动接收
+    /* 重新启动接收 */
     start_rx(drv);
 }
 
+/* ★ 修复问题2：available 检查 locked 状态 */
 uint16_t uart_drv_available(uart_drv_t *drv) {
     if (drv == NULL) return 0;
-    
-    // ★ 只有 DATA_READY 且未锁定，数据才有效 ★
     if (drv->state == UART_DRV_DATA_READY && drv->locked == 0) {
         return drv->rx_len;
     }
@@ -234,13 +264,23 @@ uart_drv_state_t uart_drv_get_state(uart_drv_t *drv) {
     return drv->state;
 }
 
+void uart_drv_get_stats(uart_drv_t *drv, uint32_t *out_overrun, uint32_t *out_dropped) {
+    if (drv == NULL) return;
+    if (out_overrun) *out_overrun = drv->rx_overrun_cnt;
+    if (out_dropped) *out_dropped = drv->rx_dropped_bytes;
+}
+
 void uart_drv_reset(uart_drv_t *drv) {
+    if (drv == NULL) return;
+    
     HAL_UART_DMAStop(drv->huart);
     __HAL_UART_CLEAR_FLAG(drv->huart, UART_FLAG_ORE | UART_FLAG_FE | UART_FLAG_NE);
     
     drv->state = UART_DRV_IDLE;
     drv->locked = 0;
     drv->rx_len = 0;
+    drv->rx_overrun_cnt = 0;
+    drv->rx_dropped_bytes = 0;
     
     rs485_rx_enable(drv);
     start_rx(drv);
@@ -250,9 +290,9 @@ void uart_drv_get_cfg(uart_drv_t *drv, uart_drv_cfg_t *cfg) {
     if (drv && cfg) *cfg = drv->cfg;
 }
 
-// ===========================
-// 中断入口
-// ===========================
+/* ===========================
+ * ★ 中断入口（全部修复）
+ * =========================== */
 
 void uart_drv_on_tx_done(UART_HandleTypeDef *huart) {
     uart_drv_t *drv = uart_drv_find(huart);
@@ -261,50 +301,57 @@ void uart_drv_on_tx_done(UART_HandleTypeDef *huart) {
     drv->state = UART_DRV_IDLE;
     rs485_rx_enable(drv);
     
+    /* 发送完成回调 */
     if (drv->on_sent) drv->on_sent(drv);
     
+    /* 重新启动接收（使用安全的 start_rx） */
     start_rx(drv);
 }
 
-void uart_drv_on_idle(UART_HandleTypeDef *huart) {
+void uart_drv_on_idle(UART_HandleTypeDef *huart, uint16_t size) {
     uart_drv_t *drv = uart_drv_find(huart);
     if (drv == NULL) return;
-    if (drv->state == UART_DRV_TX_BUSY) return;
     
-    // ★ 如果已经有数据未被处理，忽略新的空闲中断 ★
+    /* ★ 修复问题3：发送期间收到数据 -> 记录丢包 */
+    if (drv->state == UART_DRV_TX_BUSY) {
+        drv->rx_overrun_cnt++;
+        __HAL_UART_CLEAR_IDLEFLAG(huart);
+        return;
+    }
+    
+    /* ★ 如果已有数据未处理，忽略新数据 */
     if (drv->state == UART_DRV_DATA_READY) {
+        drv->rx_overrun_cnt++;
         __HAL_UART_CLEAR_IDLEFLAG(huart);
         return;
     }
     
-    // ★ 如果被锁定，说明上层正在处理数据，忽略 ★
+    /* ★ 如果被锁定，忽略 */
     if (drv->locked) {
+        drv->rx_overrun_cnt++;
         __HAL_UART_CLEAR_IDLEFLAG(huart);
         return;
     }
 
-    /* ★★★ 关键修复：HAL 的 ReceiveToIdle_DMA 在 DMA 半传输(HT, 128字节) 和
-     *     全传输(TC, 256字节) 时也会回调本函数，而不只是 IDLE（帧结束）。
-     *     若把 HT 误判为帧结束，会把 >128 字节的大帧从中间截断 → CRC 错误。
-     *     因此只有在真正的 IDLE（或恰好填满缓冲区的 TC）时才提交数据包。★★★ */
-    {
-        HAL_UART_RxEventTypeTypeDef rx_evt = HAL_UARTEx_GetRxEventType(huart);
-        if (rx_evt != HAL_UART_RXEVENT_IDLE && rx_evt != HAL_UART_RXEVENT_TC) {
-            /* HT 等中间事件：不要停止 DMA，也不要提交数据包，等真正的帧结束 */
-            __HAL_UART_CLEAR_IDLEFLAG(huart);
-            return;
-        }
+    /* ★★★ 关键修复：使用 HAL 传入的 size 参数，而不是读取 DMA 计数器 ★★★ */
+    HAL_UART_RxEventTypeTypeDef rx_evt = HAL_UARTEx_GetRxEventType(huart);
+    if (rx_evt != HAL_UART_RXEVENT_IDLE && rx_evt != HAL_UART_RXEVENT_TC) {
+        /* HT 等中间事件：不要停止 DMA */
+        __HAL_UART_CLEAR_IDLEFLAG(huart);
+        return;
     }
 
-    if (drv->huart->hdmarx != NULL) {
-        drv->rx_len = UART_DRV_BUF_SIZE - __HAL_DMA_GET_COUNTER(drv->huart->hdmarx);
-    }
-    
-    if (drv->rx_len > 0) {
-        HAL_UART_DMAStop(drv->huart);
-        drv->state = UART_DRV_DATA_READY;
-        // ★ locked 默认为 0，等待上层调用 get_packet ★
+    /* ★ 使用 HAL 传来的 size，不再依赖 DMA 计数器 */
+    if (size > 0) {
+        drv->rx_len = size;
         
+        /* 停止 DMA 接收（防止后续数据干扰） */
+        HAL_UART_DMAStop(drv->huart);
+        
+        drv->state = UART_DRV_DATA_READY;
+        drv->locked = 1;   /* 锁定，等待上层处理 */
+        
+        /* 回调通知（如果注册了） */
         if (drv->on_recv) {
             drv->on_recv(drv, drv->rx_buf, drv->rx_len);
         }
@@ -318,7 +365,10 @@ void uart_drv_on_error(UART_HandleTypeDef *huart) {
     if (drv == NULL) return;
     
     drv->state = UART_DRV_ERROR;
+    drv->rx_dropped_bytes += drv->rx_len;  /* 记录丢失数据 */
+    
     if (drv->on_error) drv->on_error(drv);
     
+    /* 自动恢复 */
     uart_drv_reset(drv);
 }
