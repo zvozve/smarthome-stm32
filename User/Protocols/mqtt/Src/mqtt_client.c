@@ -2,6 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "SEGGER_RTT_Log.h"
+
 // ===========================
 // 辅助宏
 // ===========================

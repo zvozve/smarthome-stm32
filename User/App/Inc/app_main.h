@@ -13,17 +13,6 @@
 #define FIRMWARE_VERSION  "V1.0.1/2026-07-15"
 
 // ===========================
-// 调试宏
-// ===========================
-#define APP_DEBUG_ENABLE    1
-
-#if APP_DEBUG_ENABLE
-    #define APP_LOG(fmt, ...)   SEGGER_RTT_printf(0, "[APP] " fmt, ##__VA_ARGS__)
-#else
-    #define APP_LOG(fmt, ...)   ((void)0)
-#endif
-
-// ===========================
 // 任务句柄
 // ===========================
 extern osThreadId_t appTaskHandle;

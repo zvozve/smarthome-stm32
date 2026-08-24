@@ -8,8 +8,12 @@
 
 // Protocols
 #include "wol.h"
+
+// Tasks
 #include "task_mqtt.h"
 #include "task_wol.h"
+#include "task_temperature.h"
+#include "SEGGER_RTT_Log.h"
 
 // ===========================
 // 任务句柄定义
@@ -98,22 +102,25 @@ void app_main_init(void) {
 // ===========================
 
 void app_main_create_tasks(void) {
-    WOL_Task_Init();
-    APP_LOG("WOL_Task initialized\n");
+    // WOL_Task_Init();
+    // APP_LOG("WOL_Task initialized\n");
     
-    HLK_Manager_Init();
-    APP_LOG("HLK_Manager initialized\n");
+    // HLK_Manager_Init();
+    // APP_LOG("HLK_Manager initialized\n");
 
-    mqtt_task_callbacks_t callbacks = {
-        .on_command = on_mqtt_command,
-        .on_data_request = on_mqtt_data_request,
-        .on_config = on_mqtt_config,
-        .on_state_change = on_mqtt_state_change,
-        .get_device_status = get_device_status,
-    };
+    // mqtt_task_callbacks_t callbacks = {
+    //     .on_command = on_mqtt_command,
+    //     .on_data_request = on_mqtt_data_request,
+    //     .on_config = on_mqtt_config,
+    //     .on_state_change = on_mqtt_state_change,
+    //     .get_device_status = get_device_status,
+    // };
 
-    MQTT_Task_Init(&callbacks);
-    APP_LOG("MQTT_Task initialized\n");
+    // MQTT_Task_Init(&callbacks);
+    // APP_LOG("MQTT_Task initialized\n");
+
+    Task_Temperature_Init();
+    APP_LOG("Temperature_Task initialized\n");
 
     APP_LOG("All tasks created\n");
 }

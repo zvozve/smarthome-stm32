@@ -5,18 +5,6 @@
 #include "lwip/err.h"
 #include <stdbool.h>
 
-/*===========================================================================
- * WOL Debug Configuration
- *===========================================================================*/
-#define WOL_DEBUG_ENABLE    1
-
-#if WOL_DEBUG_ENABLE
-    #include "SEGGER_RTT.h"
-    #define WOL_LOG(fmt, ...)   SEGGER_RTT_printf(0, "[WOL] " fmt, ##__VA_ARGS__)
-#else
-    #define WOL_LOG(fmt, ...)   ((void)0)
-#endif
-
 /**
  * @brief Send WOL magic packet via LAN Ethernet frame
  * @retval ERR_OK on success, others on failure

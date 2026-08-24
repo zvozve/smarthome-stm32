@@ -3,6 +3,7 @@
 #include "lwip/netif.h"
 #include "lwip/pbuf.h"
 #include "netif/ethernet.h"
+#include "SEGGER_RTT_Log.h"
 
 // Use MAC from network_config.h
 const uint8_t targetMac[6] = TARGET_PC_MAC_BYTE;

@@ -42,20 +42,20 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
 )
 
-file(GLOB_RECURSE USER_SOURCES 
+file(GLOB_RECURSE USER_SOURCES
     "User/App/Src/*.c"
+    "User/BSP/bsp_dwt/Src/*.c"
+    "User/BSP/bsp_gpio/Src/*.c"
+    "User/BSP/bsp_uart/Src/*.c"
+    "User/Hardware/dht11/Src/*.c"
+    "User/Hardware/heart_beat/Src/*.c"
     "User/Hardware/hlk_rm58s/Src/*.c"
     "User/Hardware/lan8720a/Src/*.c"
+    "User/MiddleWare/SEGGER_RTT/Src/*.c"
     "User/Protocols/cJSON/Src/*.c"
     "User/Protocols/mqtt/Src/*.c"
-    "User/Protocols/SEGGER_RTT/Src/*.c"
     "User/Protocols/wol/Src/*.c"
     "User/Tasks/Src/*.c"
-)
-
-# 排除示例文件
-list(REMOVE_ITEM USER_SOURCES 
-    "${CMAKE_CURRENT_SOURCE_DIR}/User/Hardware/hlk_rm58s/Src/hlk_rm58s_user_example.c"
 )
 
 # Add sources to executable
@@ -68,14 +68,24 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     User/App/Inc
-    User/Config/Inc
+    User/BSP/bsp_dwt/Inc
+    User/BSP/bsp_gpio/Inc
+    User/BSP/bsp_uart/Inc
+    User/Common/Inc
+    User/Hardware/dht11/Inc
+    User/Hardware/heart_beat/Inc
     User/Hardware/hlk_rm58s/Inc
     User/Hardware/lan8720a/Inc
+    User/MiddleWare/SEGGER_RTT/Inc
     User/Protocols/cJSON/Inc
     User/Protocols/mqtt/Inc
-    User/Protocols/SEGGER_RTT/Inc
     User/Protocols/wol/Inc
     User/Tasks/Inc
+)
+
+# 排除示例文件
+list(REMOVE_ITEM USER_SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/User/Hardware/hlk_rm58s/Src/hlk_rm58s_user_example.c"
 )
 
 # Add project symbols (macros)

@@ -12,11 +12,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-// ===========================
-// WOL 日志 - 直接使用 HLK_LOG，避免重复定义
-// ===========================
-#undef WOL_LOG
-#define WOL_LOG(fmt, ...)  HLK_LOG("[WOL] " fmt, ##__VA_ARGS__)
+
 
 // ===========================
 // 内部状态

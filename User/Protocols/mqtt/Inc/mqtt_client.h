@@ -10,20 +10,6 @@ extern "C" {
 #endif
 
 // ===========================
-// MQTT 日志 - 使用 SEGGER_RTT_printf
-// ===========================
-#ifndef MQTT_LOG_ENABLE
-    #define MQTT_LOG_ENABLE     1
-#endif
-
-#if MQTT_LOG_ENABLE
-    #include "SEGGER_RTT.h"
-    #define MQTT_LOG(fmt, ...)  SEGGER_RTT_printf(0, "[MQTT] " fmt, ##__VA_ARGS__)
-#else
-    #define MQTT_LOG(fmt, ...)  ((void)0)
-#endif
-
-// ===========================
 // MQTT 配置
 // ===========================
 #define MQTT_MAX_PACKET_SIZE    1024
