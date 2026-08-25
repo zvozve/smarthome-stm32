@@ -319,7 +319,6 @@ static void low_level_init(struct netif *netif)
     HAL_ETH_Start_IT(&heth);
     netif_set_up(netif);
     netif_set_link_up(netif);
-
 /* USER CODE BEGIN PHY_POST_CONFIG */
 
 /* USER CODE END PHY_POST_CONFIG */
@@ -909,4 +908,3 @@ void HAL_ETH_TxFreeCallback(uint32_t * buff)
 /* USER CODE BEGIN 8 */
 
 /* USER CODE END 8 */
-

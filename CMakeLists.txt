@@ -47,6 +47,7 @@ file(GLOB_RECURSE USER_SOURCES
     "User/BSP/bsp_dwt/Src/*.c"
     "User/BSP/bsp_gpio/Src/*.c"
     "User/BSP/bsp_uart/Src/*.c"
+    "User/Hardware/dht11/Src/*.c"
     "User/Hardware/heart_beat/Src/*.c"
     "User/Hardware/hlk_rm58s/Src/*.c"
     "User/Hardware/lan8720a/Src/*.c"
