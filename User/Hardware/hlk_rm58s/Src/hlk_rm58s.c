@@ -230,7 +230,7 @@ static void hlk_send_next_cmd(hlk_drv_t *d) {
     memset(d->cfg.response, 0, sizeof(d->cfg.response));
 
     char tx_buf[136];
-    snprintf(tx_buf, sizeof(tx_buf), "%s\r\n", cmd_buf);
+    snprintf(tx_buf, sizeof(tx_buf), "%s", cmd_buf);
     uart_drv_send(d->uart, (uint8_t*)tx_buf, strlen(tx_buf));
 }
 

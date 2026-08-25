@@ -1,207 +1,193 @@
+/**
+ * @file    dht11.c
+ * @brief   DHT11 温湿度传感器驱动（适配 BSP GPIO V3.1）
+ * @version V3.1
+ * @date    2026-08-25
+ */
+
 #include "dht11.h"
+#include "main.h"
+#include "bsp_gpio_drv.h"
 #include "bsp_dwt.h"
-#include "gpio.h"
-#include "stm32f4xx_hal.h"
 #include "SEGGER_RTT_Log.h"
 #include <string.h>
 
-// ============================================
-// 硬件定义
-// ============================================
-#define DHT11_PORT          GPIOE
-#define DHT11_PIN           GPIO_PIN_6
+/* ========== 内部变量 ========== */
 
-// ============================================
-// 内部函数：GPIO 模式切换
-// ============================================
+static gpio_dev_t s_dev = {0};
 
-static void DHT11_SetOutput(void)
+/* ========== 内部函数 ========== */
+
+/**
+ * @brief   切换为输出模式（开漏）
+ */
+static inline void set_output(void)
 {
-    GPIO_InitTypeDef gpio_init = {0};
-    gpio_init.Pin = DHT11_PIN;
-    gpio_init.Mode = GPIO_MODE_OUTPUT_OD;   // 开漏输出（配合外部上拉）
-    gpio_init.Pull = GPIO_NOPULL;           // 不要内部上拉
-    gpio_init.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(DHT11_PORT, &gpio_init);
+    bsp_gpio_set_mode(&s_dev,
+                      BSP_GPIO_MODE_OUTPUT_OD,
+                      BSP_GPIO_PULL_NOPULL,
+                      BSP_GPIO_SPEED_HIGH);
 }
 
-static void DHT11_SetInput(void)
+/**
+ * @brief   切换为输入模式（上拉）
+ */
+static inline void set_input(void)
 {
-    GPIO_InitTypeDef gpio_init = {0};
-    gpio_init.Pin = DHT11_PIN;
-    gpio_init.Mode = GPIO_MODE_INPUT;
-    gpio_init.Pull = GPIO_PULLUP;           // 内部上拉作为备用
-    HAL_GPIO_Init(DHT11_PORT, &gpio_init);
+    bsp_gpio_set_mode(&s_dev,
+                      BSP_GPIO_MODE_INPUT,
+                      BSP_GPIO_PULL_UP,
+                      BSP_GPIO_SPEED_LOW);
 }
 
-// ============================================
-// 微秒级延时（使用 bsp_DelayUS）
-// ============================================
-#define DHT11_DELAY_US(us)  bsp_DelayUS(us)
-
-// ============================================
-// 读取一个位（核心时序）
-// ============================================
-
-static uint8_t DHT11_ReadBit(void)
+/**
+ * @brief   读取一个位
+ * @retval  0/1 正常，0xFF 超时
+ */
+static uint8_t read_bit(void)
 {
-    uint32_t timeout;
-    uint32_t start_time;
-    uint32_t high_time_us;
+    uint32_t start;
+    uint32_t high_us;
 
-    // 1. 等待低电平开始（DHT11 拉低，约 50us）
-    timeout = 1000;  // 最多等 1000us
-    while (HAL_GPIO_ReadPin(DHT11_PORT, DHT11_PIN) == GPIO_PIN_SET)
-    {
-        DHT11_DELAY_US(1);
-        if (--timeout == 0)
-        {
-            return 0xFF;  // 超时
+    /* 等待低电平开始（DHT11 拉低约 50us） */
+    start = bsp_GetCycleCount();
+    while (BSP_GPIO_READ_RAW(&s_dev) == GPIO_PIN_SET) {
+        if (bsp_GetElapsedUS(start, bsp_GetCycleCount()) > 100) {
+            return 0xFF;
         }
     }
 
-    // 2. 等待高电平开始（DHT11 释放总线，约 50us）
-    timeout = 1000;
-    while (HAL_GPIO_ReadPin(DHT11_PORT, DHT11_PIN) == GPIO_PIN_RESET)
-    {
-        DHT11_DELAY_US(1);
-        if (--timeout == 0)
-        {
-            return 0xFF;  // 超时
+    /* 等待高电平开始（DHT11 释放） */
+    start = bsp_GetCycleCount();
+    while (BSP_GPIO_READ_RAW(&s_dev) == GPIO_PIN_RESET) {
+        if (bsp_GetElapsedUS(start, bsp_GetCycleCount()) > 100) {
+            return 0xFF;
         }
     }
 
-    // 3. 测量高电平持续时间（决定 bit 是 0 还是 1）
-    start_time = DWT->CYCCNT;
-    while (HAL_GPIO_ReadPin(DHT11_PORT, DHT11_PIN) == GPIO_PIN_SET)
-    {
-        // 防止死循环：如果高电平超过 200us，直接退出
-        if ((DWT->CYCCNT - start_time) > (200 * (SystemCoreClock / 1000000)))
-        {
+    /* 测量高电平持续时间 */
+    start = bsp_GetCycleCount();
+    while (BSP_GPIO_READ_RAW(&s_dev) == GPIO_PIN_SET) {
+        if (bsp_GetElapsedUS(start, bsp_GetCycleCount()) > 100) {
             break;
         }
     }
 
-    // 计算高电平持续时间（微秒）
-    high_time_us = (DWT->CYCCNT - start_time) / (SystemCoreClock / 1000000);
+    high_us = bsp_GetElapsedUS(start, bsp_GetCycleCount());
 
-    // DHT11: 26~28us = '0', 70us = '1'
-    return (high_time_us > 40) ? 1 : 0;
+    /* DHT11: 26~28us → 0，70us → 1 */
+    return (high_us > 40) ? 1 : 0;
 }
 
-// ============================================
-// 读取 40 位数据
-// ============================================
-
-static uint8_t DHT11_ReadRaw(uint8_t *buffer)
+/**
+ * @brief   读取 40 位原始数据
+ * @param   buffer  5 字节缓冲区
+ * @retval  true 成功，false 失败
+ */
+static bool read_raw(uint8_t *buffer)
 {
-    uint8_t bit;
-    uint32_t timeout;
+    uint32_t start;
 
-    // 1. 发送启动信号
-    DHT11_SetOutput();
-    HAL_GPIO_WritePin(DHT11_PORT, DHT11_PIN, GPIO_PIN_RESET);
-    DHT11_DELAY_US(18000);  // 拉低至少 18ms
+    /* 1. 发送启动信号（不关中断，20ms 可以接受被打断） */
+    set_output();
+    BSP_GPIO_WRITE_RAW(&s_dev, GPIO_PIN_RESET);
+    bsp_DelayUS(20000);                     // 20ms 低电平，开中断状态
 
-    HAL_GPIO_WritePin(DHT11_PORT, DHT11_PIN, GPIO_PIN_SET);
-    DHT11_DELAY_US(30);     // 拉高 30us
+    BSP_GPIO_WRITE_RAW(&s_dev, GPIO_PIN_SET);
+    bsp_DelayUS(30);
 
-    // 2. 切换为输入
-    DHT11_SetInput();
+    set_input();
 
-    // 3. 等待 DHT11 应答（拉低约 80us）
-    timeout = 1000;
-    while (HAL_GPIO_ReadPin(DHT11_PORT, DHT11_PIN) == GPIO_PIN_SET)
-    {
-        DHT11_DELAY_US(1);
-        if (--timeout == 0)
-        {
-            TEMP_LOG("DHT11: No response (pin stayed HIGH)\r\n");
-            return 0;
+    /* 2. 等待 DHT11 响应（这里开始关中断，后面时序要求高） */
+    __disable_irq();
+
+    // 等待 DHT11 拉低（约 80us）
+    start = bsp_GetCycleCount();
+    while (BSP_GPIO_READ_RAW(&s_dev) == GPIO_PIN_SET) {
+        if (bsp_GetElapsedUS(start, bsp_GetCycleCount()) > 100) {
+            __enable_irq();
+            SYS_LOG("DHT11: No response");
+            return false;
         }
     }
 
-    // 4. 等待 DHT11 释放总线（拉高约 80us）
-    timeout = 1000;
-    while (HAL_GPIO_ReadPin(DHT11_PORT, DHT11_PIN) == GPIO_PIN_RESET)
-    {
-        DHT11_DELAY_US(1);
-        if (--timeout == 0)
-        {
-            TEMP_LOG("DHT11: Stuck LOW\r\n");
-            return 0;
+    // 等待 DHT11 释放总线（拉高约 80us）
+    start = bsp_GetCycleCount();
+    while (BSP_GPIO_READ_RAW(&s_dev) == GPIO_PIN_RESET) {
+        if (bsp_GetElapsedUS(start, bsp_GetCycleCount()) > 100) {
+            __enable_irq();
+            SYS_LOG("DHT11: Stuck LOW");
+            return false;
         }
     }
 
-    // 5. 读取 40 位数据
-    for (uint8_t i = 0; i < 40; i++)
-    {
-        bit = DHT11_ReadBit();
-        if (bit == 0xFF)
-        {
-            TEMP_LOG("DHT11: Read bit timeout at bit %d\r\n", i);
-            return 0;
+    /* 3. 读取 40 位数据 */
+    memset(buffer, 0, 5);
+    for (uint8_t i = 0; i < 40; i++) {
+        uint8_t bit = read_bit();
+        if (bit == 0xFF) {
+            __enable_irq();
+            SYS_LOG("DHT11: Bit timeout at %d", i);
+            return false;
         }
-
-        buffer[i / 8] <<= 1;
-        buffer[i / 8] |= bit;
+        buffer[i / 8] = (buffer[i / 8] << 1) | bit;
     }
 
-    return 1;
+    __enable_irq();
+    return true;
 }
 
-// ============================================
-// 对外接口：初始化
-// ============================================
+/* ========== 对外 API ========== */
 
 void DHT11_Init(void)
 {
-    DHT11_SetInput();
-    TEMP_LOG("DHT11: Driver initialized (GPIO + DWT)\r\n");
+    /* 使用新版 BSP 初始化为开漏输出 */
+    if (!bsp_gpio_init_with_mode(&s_dev,
+                                 DHT11_DAT_GPIO_Port,
+                                 DHT11_DAT_Pin,
+                                 true,                          /* active_high */
+                                 BSP_GPIO_MODE_OUTPUT_OD,
+                                 BSP_GPIO_PULL_NOPULL,
+                                 BSP_GPIO_SPEED_HIGH)) {
+        SYS_LOG("DHT11: Init FAILED");
+        return;
+    }
+
+    /* 总线默认释放 */
+    BSP_GPIO_WRITE_RAW(&s_dev, GPIO_PIN_SET);
+    SYS_LOG("DHT11: Init OK");
 }
 
-// ============================================
-// 对外接口：读取数据
-// ============================================
-
-uint8_t DHT11_Read(DHT11_Data_t *pData)
+bool DHT11_Read(DHT11_Data_t *pData)
 {
-    uint8_t buffer[5] = {0};
-    uint8_t result;
+    uint8_t buf[5] = {0};
 
-    if (pData == NULL)
-    {
-        return 0;
+    if (pData == NULL) {
+        return false;
     }
 
-    // 关中断，保护时序
-    __disable_irq();
+    pData->is_valid = false;
 
-    result = DHT11_ReadRaw(buffer);
+    // 不再在这里关中断
+    bool ok = read_raw(buf);
 
-    __enable_irq();
-
-    if (!result)
-    {
-        pData->is_valid = 0;
-        return 0;
+    if (!ok) {
+        return false;
     }
 
-    // 校验
-    uint8_t sum = buffer[0] + buffer[1] + buffer[2] + buffer[3];
-    if (buffer[4] != sum)
-    {
-        TEMP_LOG("DHT11: Checksum fail (sum=%d, recv=%d)\r\n", sum, buffer[4]);
-        pData->is_valid = 0;
-        return 0;
+    // 校验和...
+    uint8_t sum = (uint8_t)(buf[0] + buf[1] + buf[2] + buf[3]);
+    if (buf[4] != sum) {
+        SYS_LOG("DHT11: Checksum fail (calc=%u, recv=%u)", sum, buf[4]);
+        return false;
     }
 
-    pData->hum_int   = buffer[0];
-    pData->hum_dec   = buffer[1];
-    pData->temp_int  = buffer[2];
-    pData->temp_dec  = buffer[3];
-    pData->checksum  = buffer[4];
-    pData->is_valid  = 1;
+    pData->hum_int  = buf[0];
+    pData->hum_dec  = buf[1];
+    pData->temp_int = buf[2];
+    pData->temp_dec = buf[3];
+    pData->checksum = buf[4];
+    pData->is_valid = true;
 
-    return 1;
+    return true;
 }

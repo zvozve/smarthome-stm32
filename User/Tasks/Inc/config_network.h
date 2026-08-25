@@ -35,7 +35,7 @@
  *===========================================================================*/
 #define MQTT_BROKER_IP      "192.168.31.144"
 #define MQTT_BROKER_PORT    1883
-#define MQTT_CLIENT_ID      "STM32_Client_001"
+#define MQTT_CLIENT_ID      "STM32_Client_002"
 #define MQTT_USERNAME       "STM32"
 #define MQTT_PASSWORD       "STM32"
 
