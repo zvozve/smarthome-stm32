@@ -44,6 +44,8 @@ void app_main_create_tasks(void) {
     MQTT_Task_Init();
     APP_LOG("MQTT task init done");
 
+    /* WoL 已内联到 business_mqtt（业务层），无独立任务 */
+
     APP_LOG("All tasks created");
 }
 

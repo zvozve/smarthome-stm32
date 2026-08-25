@@ -1,8 +1,41 @@
 #include "business_mqtt.h"
+#include "wol.h"              // send_wol (WoL 协议驱动)
+#include "stm32f4xx_hal.h"    // HAL_GetTick
 
 #include <string.h>
 #include <stdlib.h>
 #include "cmsis_os2.h"
+
+// ===========================
+// WoL 业务状态（重试策略归业务层）
+// ===========================
+#define WOL_RETRY_MAX     3
+#define WOL_RETRY_MS      30000
+
+static bool     wol_send_request   = false;   // 命令触发的发送请求
+static bool     wol_failed         = false;   // 上次发送是否失败
+static uint8_t  wol_retry_count   = 0;
+static uint32_t wol_last_send_tick = 0;
+
+static void wol_do_send(void) {
+    WOL_LOG("Sending WOL...");
+    wol_last_send_tick = HAL_GetTick();
+
+    err_t result = send_wol();
+
+    if (result == ERR_OK) {
+        WOL_LOG("WOL sent successfully");
+        wol_failed = false;
+        wol_retry_count = 0;
+    } else {
+        WOL_LOG("WOL failed (err=%d)", result);
+        wol_failed = true;
+        wol_retry_count++;
+        if (wol_retry_count >= WOL_RETRY_MAX) {
+            WOL_LOG("WOL failed %d times, stop retry", WOL_RETRY_MAX);
+        }
+    }
+}
 
 // ===========================
 // 业务实现（用户只改这里）
@@ -12,6 +45,12 @@
 static void mqtt_business_on_command(const char *cmd, const char *params_json) {
     MQTT_LOG("MQTT cmd: %s | params: %s",
              cmd ? cmd : "(null)", params_json ? params_json : "(null)");
+
+    /* 命令路由：业务层直接处理，无需独立任务 */
+    if (strcmp(cmd, "wol") == 0) {
+        wol_send_request = true;
+        return;
+    }
     /* TODO: 路由到具体设备动作（LED / 继电器 / 场景等） */
 }
 
@@ -82,4 +121,26 @@ void mqtt_business_get_device_status(device_status_t *status) {
     status->led_state   = 0;
     status->relay_state = 0;
     status->uptime      = osKernelGetTickCount() / 1000;
+}
+
+// ===========================
+// 业务周期处理（由 MQTT 任务循环每 100ms 调用）
+// WoL 重试等与 MQTT 连接状态独立的业务
+// ===========================
+void business_mqtt_process(void) {
+    /* WoL：命令触发的首次发送 */
+    if (wol_send_request) {
+        wol_send_request = false;
+        wol_do_send();
+        return;
+    }
+
+    /* WoL：失败重试（每 30s，最多 3 次） */
+    if (wol_failed && wol_retry_count < WOL_RETRY_MAX) {
+        uint32_t now = HAL_GetTick();
+        if (now - wol_last_send_tick > WOL_RETRY_MS) {
+            WOL_LOG("Retry sending WOL (%d/%d)", wol_retry_count + 1, WOL_RETRY_MAX);
+            wol_do_send();
+        }
+    }
 }

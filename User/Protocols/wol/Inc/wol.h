@@ -1,9 +1,15 @@
 #ifndef __WOL_H
 #define __WOL_H
 
-#include "network_config.h"
+#include "config_network.h"
 #include "lwip/err.h"
 #include <stdbool.h>
+
+#ifndef WOL_LOG_ENABLE
+    #define WOL_LOG_ENABLE     1
+#endif
+#include "SEGGER_RTT_Log.h"
+#define WOL_LOG(fmt, ...)     RTT_LOG_TAG(WOL_LOG_ENABLE,    "WOL",    fmt, ##__VA_ARGS__)
 
 /**
  * @brief Send WOL magic packet via LAN Ethernet frame

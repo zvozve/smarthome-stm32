@@ -232,6 +232,10 @@ static void mqtt_task_send_status_internal(void) {
 // ===========================
 static void mqtt_task_process(void) {
     uint32_t now = mqtt_tick_callback();
+
+    /* 业务周期处理（WoL 重试等），与 MQTT 连接状态独立 */
+    business_mqtt_process();
+
     bool wifi_connected = task_wifi_is_connected();
 
     if (!wifi_connected) {

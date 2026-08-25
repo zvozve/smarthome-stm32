@@ -27,6 +27,9 @@ void mqtt_business_on_message(const char *topic, const uint8_t *payload, uint16_
 // 设备状态（心跳发什么）
 void mqtt_business_get_device_status(device_status_t *status);
 
+// 业务周期处理（由 MQTT 任务循环调用；WoL 重试等与 MQTT 连接状态独立的业务）
+void business_mqtt_process(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -5,14 +5,14 @@
 #include "netif/ethernet.h"
 #include "SEGGER_RTT_Log.h"
 
-// Use MAC from network_config.h
+// Use MAC from config_network.h
 const uint8_t targetMac[6] = TARGET_PC_MAC_BYTE;
 
 // External LAN network interface (defined by LwIP/ETH init)
 extern struct netif gnetif;   // Replace with your actual LAN netif variable
 
 void wol_print_mac(void) {
-    WOL_LOG("Target MAC: %02X:%02X:%02X:%02X:%02X:%02X\r\n",
+    WOL_LOG("Target MAC: %02X:%02X:%02X:%02X:%02X:%02X",
             targetMac[0], targetMac[1], targetMac[2],
             targetMac[3], targetMac[4], targetMac[5]);
 }
@@ -20,20 +20,20 @@ void wol_print_mac(void) {
 bool wol_check_network_ready(void) {
     struct netif *netif = &gnetif;
     if (netif == NULL) {
-        WOL_LOG("LAN interface not initialized!\r\n");
+        WOL_LOG("LAN interface not initialized!");
         return false;
     }
     if (!netif_is_up(netif) || !netif_is_link_up(netif)) {
-        WOL_LOG("LAN link is down!\r\n");
+        WOL_LOG("LAN link is down!");
         return false;
     }
     if (ip4_addr_isany_val(netif->ip_addr)) {
-        WOL_LOG("LAN has no IP address!\r\n");
+        WOL_LOG("LAN has no IP address!");
         return false;
     }
     char ip_str[16];
     ip4addr_ntoa_r(&netif->ip_addr, ip_str, sizeof(ip_str));
-    WOL_LOG("LAN ready, IP: %s\r\n", ip_str);
+    WOL_LOG("LAN ready, IP: %s", ip_str);
     return true;
 }
 
@@ -44,11 +44,11 @@ err_t send_wol(void) {
     struct eth_hdr *ethhdr;
 
     if (!wol_check_network_ready()) {
-        WOL_LOG("LAN not ready, cannot send WOL!\r\n");
+        WOL_LOG("LAN not ready, cannot send WOL!");
         return ERR_IF;
     }
 
-    WOL_LOG("Sending WOL via LAN...\r\n");
+    WOL_LOG("Sending WOL via LAN...");
     wol_print_mac();
 
     // Construct magic packet (102 bytes)
@@ -62,7 +62,7 @@ err_t send_wol(void) {
     size_t total_len = sizeof(struct eth_hdr) + sizeof(magic_data);
     pkt_buf = pbuf_alloc(PBUF_RAW, total_len, PBUF_POOL);
     if (pkt_buf == NULL) {
-        WOL_LOG("Failed to allocate pbuf!\r\n");
+        WOL_LOG("Failed to allocate pbuf!");
         return ERR_MEM;
     }
 
@@ -88,9 +88,9 @@ err_t send_wol(void) {
     pbuf_free(pkt_buf);
 
     if (err == ERR_OK) {
-        WOL_LOG("WOL frame sent! (%d bytes via LAN)\r\n", total_len);
+        WOL_LOG("WOL frame sent! (%d bytes via LAN)", total_len);
     } else {
-        WOL_LOG("Send failed (err=%d)\r\n", err);
+        WOL_LOG("Send failed (err=%d)", err);
     }
     return err;
 }

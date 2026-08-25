@@ -47,7 +47,7 @@ void heart_beat_run(void) {
     // 1. 翻转 LED
     if (g_initialized) {
         bsp_gpio_toggle(&g_heart_beat_led);
-        SYS_LOG("bsp_gpio_toggle");
+        // SYS_LOG("bsp_gpio_toggle");
     }
 
     // 2. 喂看门狗

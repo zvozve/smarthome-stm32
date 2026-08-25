@@ -115,29 +115,9 @@
 #endif
 #define DBG_LOG(fmt, ...)     RTT_LOG_TAG(DBG_LOG_ENABLE,    "DBG",    fmt, ##__VA_ARGS__)
 
-#ifndef APP_LOG_ENABLE
-    #define APP_LOG_ENABLE     1
-#endif
-#define APP_LOG(fmt, ...)     RTT_LOG_TAG(APP_LOG_ENABLE,    "APP",    fmt, ##__VA_ARGS__)
-
 #ifndef HEX_LOG_ENABLE
     #define HEX_LOG_ENABLE     0
 #endif
 #define HEX_LOG(prefix, data, len) HEX_PRINT(HEX_LOG_ENABLE, prefix, data, len)
-
-#ifndef UART_LOG_ENABLE
-    #define UART_LOG_ENABLE    1
-#endif
-#define UART_LOG(fmt, ...)    RTT_LOG_TAG(UART_LOG_ENABLE,   "UART",   fmt, ##__VA_ARGS__)
-
-#ifndef MODBUS_LOG_ENABLE
-    #define MODBUS_LOG_ENABLE  1
-#endif
-#define MODBUS_LOG(fmt, ...)  RTT_LOG_TAG(MODBUS_LOG_ENABLE, "MODBUS", fmt, ##__VA_ARGS__)
-
-#ifndef HMI_LOG_ENABLE
-    #define HMI_LOG_ENABLE     1
-#endif
-#define HMI_LOG(fmt, ...)     RTT_LOG_TAG(HMI_LOG_ENABLE,    "HMI",    fmt, ##__VA_ARGS__)
 
 #endif // __SEGGER_RTT_LOG_H
