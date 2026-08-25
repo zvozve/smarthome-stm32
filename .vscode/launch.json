@@ -2,15 +2,48 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "J-Link Debug",
+            "name": "Build & Debug",
             "type": "cortex-debug",
             "request": "launch",
             "servertype": "jlink",
-            "device": "STM32F407ZG",
-            "interface": "swd",
-            "executable": "${workspaceFolder}/build/Release/SmartHome.elf",
+            "serverpath": "${config:jlink.root}/JLinkGDBServerCL.exe",
+            "device": "${config:jlink.device}",
+            "interface": "${config:jlink.interface}",
+            "executable": "${command:cmake.launchTargetPath}",
             "runToEntryPoint": "main",
-            "preLaunchTask": "Build (Release)"
+            "svdFile": "${config:jlink.svdFile}",
+            "rttConfig": {
+                "enabled": true,
+                "address": "auto",
+                "decoders": [
+                    {
+                        "port": 0,
+                        "type": "console"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "Debug",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "jlink",
+            "serverpath": "${config:jlink.root}/JLinkGDBServerCL.exe",
+            "device": "${config:jlink.device}",
+            "interface": "${config:jlink.interface}",
+            "executable": "${command:cmake.getLaunchTargetPath}",
+            "runToEntryPoint": "main",
+            "svdFile": "${config:jlink.svdFile}",
+            "rttConfig": {
+                "enabled": true,
+                "address": "auto",
+                "decoders": [
+                    {
+                        "port": 0,
+                        "type": "console"
+                    }
+                ]
+            }
         }
     ]
 }

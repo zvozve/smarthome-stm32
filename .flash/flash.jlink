@@ -1,8 +1,0 @@
-// J-Link Commander script - incremental flash using .elf
-// Only erases sectors that contain code data, not the whole chip
-r
-h
-loadfile SmartHome.elf
-r
-g
-exit
