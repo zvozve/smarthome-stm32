@@ -111,7 +111,7 @@
 #define INFO_LOG(fmt, ...)    RTT_LOG_TAG(INFO_LOG_ENABLE,   "INFO",   fmt, ##__VA_ARGS__)
 
 #ifndef DBG_LOG_ENABLE
-    #define DBG_LOG_ENABLE     0
+    #define DBG_LOG_ENABLE     1
 #endif
 #define DBG_LOG(fmt, ...)     RTT_LOG_TAG(DBG_LOG_ENABLE,    "DBG",    fmt, ##__VA_ARGS__)
 
