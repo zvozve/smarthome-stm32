@@ -28,7 +28,7 @@ void heart_beat_init(void) {
 
     // 2. 初始化 LED
 #ifdef CPU_STA_GPIO_Port
-    if (bsp_gpio_init(&g_heart_beat_led, CPU_STA_GPIO_Port, CPU_STA_Pin, true)) {
+    if (bsp_gpio_init_output(&g_heart_beat_led, CPU_STA_GPIO_Port, CPU_STA_Pin, true)) {
         g_initialized = true;
         SYS_LOG("Heartbeat initialized on CPU_STA, watchdog: %s", 
                 USE_IWDG ? "enabled" : "disabled");

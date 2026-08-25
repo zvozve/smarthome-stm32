@@ -21,7 +21,7 @@ static void lan_delay_ms(uint32_t ms)
 
 void ETH_RST_Init(void)
 {
-  bsp_gpio_init(&eth_rst_io,    ETH_RST_GPIO_Port, ETH_RST_Pin, true);
+  bsp_gpio_init_output(&eth_rst_io,    ETH_RST_GPIO_Port, ETH_RST_Pin, true);
   ETH_RST_Execute();
 }
 

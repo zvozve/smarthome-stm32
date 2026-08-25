@@ -13,8 +13,8 @@ extern "C" {
 // ===========================
 // MQTT 任务配置 (通用运行时参数)
 // ===========================
-#define MQTT_TASK_STACK_SIZE        2048
-#define MQTT_TASK_PRIORITY          2
+#define TASK_MQTT_STACK_SIZE        2048
+#define TASK_MQTT_PRIORITY          2
 
 // MQTT 服务器配置 (从 config_network.h 引用)
 // #define MQTT_BROKER_IP              MQTT_BROKER_IP
@@ -30,25 +30,25 @@ extern "C" {
 // MQTT 任务状态
 // ===========================
 typedef enum {
-    MQTT_TASK_IDLE = 0,
-    MQTT_TASK_WAIT_WIFI,
-    MQTT_TASK_CONNECTING,
-    MQTT_TASK_CONNECTED,
-    MQTT_TASK_SUBSCRIBING,
-    MQTT_TASK_READY,
-    MQTT_TASK_ERROR,
-} mqtt_task_state_t;
+    TASK_MQTT_IDLE = 0,
+    TASK_MQTT_WAIT_WIFI,
+    TASK_MQTT_CONNECTING,
+    TASK_MQTT_CONNECTED,
+    TASK_MQTT_SUBSCRIBING,
+    TASK_MQTT_READY,
+    TASK_MQTT_ERROR,
+} task_mqtt_state_t;
 
 // ===========================
 // API
 // ===========================
-void MQTT_Task_Init(void);
-void MQTT_Task_SendStatus(void);
-void MQTT_Task_SendEvent(const char *event, const char *data_json);
-void MQTT_Task_SendData(const char *topic_suffix, const char *data_json);
-void MQTT_Task_Publish(const char *topic, const char *payload);
-mqtt_task_state_t MQTT_Task_GetState(void);
-bool MQTT_Task_IsReady(void);
+void Task_MQTT_Init(void);
+void Task_MQTT_SendStatus(void);
+void Task_MQTT_SendEvent(const char *event, const char *data_json);
+void Task_MQTT_SendData(const char *topic_suffix, const char *data_json);
+void Task_MQTT_Publish(const char *topic, const char *payload);
+task_mqtt_state_t Task_MQTT_GetState(void);
+bool Task_MQTT_IsReady(void);
 
 #ifdef __cplusplus
 }

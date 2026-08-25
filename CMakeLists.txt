@@ -71,6 +71,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User/BSP/bsp_gpio/Inc
     User/BSP/bsp_uart/Inc
     User/BSP/platform/Inc
+    User/Hardware/dht11/Inc
     User/Hardware/heart_beat/Inc
     User/Hardware/hlk_rm58s/Inc
     User/Hardware/lan8720a/Inc

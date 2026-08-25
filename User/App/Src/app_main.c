@@ -34,14 +34,14 @@ void app_main_init(void) {
 void app_main_create_tasks(void) {
     APP_LOG("app_main_create_tasks");
 
-    if (task_wifi_init()) {
+    if (Task_WiFi_init()) {
         APP_LOG("WiFi task created");
     } else {
         APP_LOG("ERROR: WiFi task create failed");
     }
 
     /* MQTT 任务依赖 WiFi 任务提供的收发接口；先建 WiFi，再启 MQTT */
-    MQTT_Task_Init();
+    Task_MQTT_Init();
     APP_LOG("MQTT task init done");
 
     /* WoL 已内联到 business_mqtt（业务层），无独立任务 */

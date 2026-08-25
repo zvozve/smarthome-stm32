@@ -76,7 +76,7 @@ static struct {
 /* ===========================
  * 内部函数声明
  * =========================== */
-static void wifi_task_entry(void *arg);
+static void task_wifi_entry(void *arg);
 static void wifi_hardware_init(void);
 static hlk_params_t wifi_build_params(void);
 static void wifi_dispatch_rx(const uint8_t *data, uint16_t len);
@@ -113,8 +113,8 @@ static hlk_params_t wifi_build_params(void) {
  * 硬件初始化
  * =========================== */
 static void wifi_hardware_init(void) {
-    bsp_gpio_init(&g_gpio_es,   WIFI_ES_GPIO_Port,  WIFI_ES_Pin,  true);
-    bsp_gpio_init(&g_gpio_rst,  WIFI_RST_GPIO_Port, WIFI_RST_Pin, true);
+    bsp_gpio_init_output(&g_gpio_es,   WIFI_ES_GPIO_Port,  WIFI_ES_Pin,  true);
+    bsp_gpio_init_output(&g_gpio_rst,  WIFI_RST_GPIO_Port, WIFI_RST_Pin, true);
     bsp_gpio_init_input(&g_gpio_sts, WIFI_STS_GPIO_Port, WIFI_STS_Pin, true);
     bsp_gpio_init_input(&g_gpio_sot, WIFI_SOT_GPIO_Port, WIFI_SOT_Pin, true);
 
@@ -165,7 +165,7 @@ static void wifi_on_state(hlk_state_t state, void *ctx) {
 /* ===========================
  * ★ WiFi 任务主循环（轮询版）★
  * =========================== */
-static void wifi_task_entry(void *arg) {
+static void task_wifi_entry(void *arg) {
     (void)arg;
 
     DBG_LOG("WiFi: tick_ms=%lu, cycle=%lu, core=%lu", 
@@ -211,8 +211,8 @@ error_exit:
  * 对外 API
  * =========================== */
 
-bool task_wifi_init(void) {
-    if (xTaskCreate(wifi_task_entry, WIFI_TASK_NAME,
+bool Task_WiFi_init(void) {
+    if (xTaskCreate(task_wifi_entry, WIFI_TASK_NAME,
                     WIFI_TASK_STACK_SIZE, NULL,
                     WIFI_TASK_PRIORITY, NULL) != pdPASS) {
         DBG_LOG("WiFi: Task create failed");
@@ -222,18 +222,18 @@ bool task_wifi_init(void) {
     return true;
 }
 
-bool task_wifi_is_connected(void) {
+bool Task_WiFi_is_connected(void) {
     return g_connected;
 }
 
-int task_wifi_send(const uint8_t *data, uint16_t len) {
+int Task_WiFi_send(const uint8_t *data, uint16_t len) {
     if (data == NULL || len == 0) return -1;
     if (g_hlk == NULL) return -2;
     if (!g_connected) return -3;
     return hlk_send(g_hlk, data, len);
 }
 
-int task_wifi_register_rx_callback(wifi_rx_callback_t callback, void *ctx) {
+int Task_WiFi_register_rx_callback(wifi_rx_callback_t callback, void *ctx) {
     if (callback == NULL) return -1;
     for (int i = 0; i < WIFI_MAX_RX_CALLBACKS; i++) {
         if (g_rx_callbacks[i].active && g_rx_callbacks[i].cb == callback) {
@@ -252,7 +252,7 @@ int task_wifi_register_rx_callback(wifi_rx_callback_t callback, void *ctx) {
     return -2;
 }
 
-int task_wifi_unregister_rx_callback(wifi_rx_callback_t callback) {
+int Task_WiFi_unregister_rx_callback(wifi_rx_callback_t callback) {
     if (callback == NULL) return -1;
     for (int i = 0; i < WIFI_MAX_RX_CALLBACKS; i++) {
         if (g_rx_callbacks[i].active && g_rx_callbacks[i].cb == callback) {
@@ -266,7 +266,7 @@ int task_wifi_unregister_rx_callback(wifi_rx_callback_t callback) {
     return -2;
 }
 
-int task_wifi_register_state_callback(wifi_state_callback_t callback, void *ctx) {
+int Task_WiFi_register_state_callback(wifi_state_callback_t callback, void *ctx) {
     if (callback == NULL) return -1;
     for (int i = 0; i < WIFI_MAX_STATE_CALLBACKS; i++) {
         if (g_state_callbacks[i].active && g_state_callbacks[i].cb == callback) {
