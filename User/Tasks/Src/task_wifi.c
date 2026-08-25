@@ -11,6 +11,7 @@
 #include "SEGGER_RTT_Log.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "config_network.h"
 
 /* ===========================
  * 任务配置
@@ -21,13 +22,9 @@
 
 /* ===========================
  * WiFi 参数
+ * 说明：SSID/密码/加密方式/远端IP/端口/协议均来自 config_network.h，
+ *       此处不再硬编码，改网络配置只动 config_network.h 一处。
  * =========================== */
-#define WIFI_SSID               "USIDE-2F"
-#define WIFI_PASSWORD           "uside8888"
-#define WIFI_SECURITY           "wpa2_aes"
-#define REMOTE_IP               "192.168.31.144"
-#define REMOTE_PORT             "9998"
-#define REMOTE_PROTOCOL         "tcp"
 #define HLK_UART_BAUDRATE       115200
 #define HLK_UART_DATABITS       8
 #define HLK_UART_PARITY         'n'
@@ -97,7 +94,7 @@ static hlk_params_t wifi_build_params(void) {
         .wifi_security      = WIFI_SECURITY,
         .remote_ip          = REMOTE_IP,
         .remote_port        = REMOTE_PORT,
-        .remote_protocol    = REMOTE_PROTOCOL,
+        .remote_protocol    = PROTOCOL,
         .uart_baudrate      = HLK_UART_BAUDRATE,
         .uart_databits      = HLK_UART_DATABITS,
         .uart_parity        = HLK_UART_PARITY,

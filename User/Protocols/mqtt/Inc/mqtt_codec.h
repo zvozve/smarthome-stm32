@@ -19,8 +19,6 @@ typedef struct {
 } device_status_t;
 
 char* mqtt_status_to_json(const device_status_t *status);  // ← 改成 device_status_t
-int mqtt_parse_command(const char *topic, const uint8_t *payload, uint16_t len, 
-                        char *cmd_buf, size_t cmd_buf_size, char **params_out);
 
 #ifdef __cplusplus
 }

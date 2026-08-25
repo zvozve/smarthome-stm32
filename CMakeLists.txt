@@ -47,10 +47,7 @@ file(GLOB_RECURSE USER_SOURCES
     "User/BSP/bsp_dwt/Src/*.c"
     "User/BSP/bsp_gpio/Src/*.c"
     "User/BSP/bsp_uart/Src/*.c"
-    "User/Hardware/dht11/Src/*.c"
-    "User/Hardware/heart_beat/Src/*.c"
     "User/Hardware/hlk_rm58s/Src/*.c"
-    "User/Hardware/lan8720a/Src/*.c"
     "User/MiddleWare/SEGGER_RTT/Src/*.c"
     "User/Protocols/cJSON/Src/*.c"
     "User/Protocols/mqtt/Src/*.c"
@@ -71,21 +68,13 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User/BSP/bsp_dwt/Inc
     User/BSP/bsp_gpio/Inc
     User/BSP/bsp_uart/Inc
-    User/Common/Inc
-    User/Hardware/dht11/Inc
-    User/Hardware/heart_beat/Inc
+    User/BSP/platform/Inc
     User/Hardware/hlk_rm58s/Inc
-    User/Hardware/lan8720a/Inc
     User/MiddleWare/SEGGER_RTT/Inc
     User/Protocols/cJSON/Inc
     User/Protocols/mqtt/Inc
     User/Protocols/wol/Inc
     User/Tasks/Inc
-)
-
-# 排除示例文件
-list(REMOVE_ITEM USER_SOURCES 
-    "${CMAKE_CURRENT_SOURCE_DIR}/User/Hardware/hlk_rm58s/Src/hlk_rm58s_user_example.c"
 )
 
 # Add project symbols (macros)
@@ -110,3 +99,10 @@ if(TARGET LwIP)
     set_target_properties(LwIP PROPERTIES SOURCES "${LWIP_SOURCES}")
     message(STATUS "Excluded LwIP mqtt.c to avoid conflict")
 endif()
+
+# 编译后自动生成 .hex 和 .bin 文件
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${CMAKE_PROJECT_NAME}> $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/${CMAKE_PROJECT_NAME}.hex
+    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${CMAKE_PROJECT_NAME}> $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/${CMAKE_PROJECT_NAME}.bin
+    COMMENT "Generating HEX and BIN firmware"
+)

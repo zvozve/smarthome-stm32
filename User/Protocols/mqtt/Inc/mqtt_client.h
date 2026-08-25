@@ -5,6 +5,12 @@
 #include <stdbool.h>
 #include <string.h>
 
+/* 统一日志：默认走 SEGGER RTT；移植到无 RTT 平台时改这里即可 */
+#ifndef MQTT_LOG
+#include "SEGGER_RTT_Log.h"
+#define MQTT_LOG(...) RTT_LOG(__VA_ARGS__)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

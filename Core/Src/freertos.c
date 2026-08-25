@@ -115,13 +115,11 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* init code for LWIP */
-  MX_LWIP_Init();
+  // MX_LWIP_Init();
   /* USER CODE BEGIN StartDefaultTask */
   /* Infinite loop */
   for(;;)
   {
-    // APP_LOG("Free heap: %d\r\n", xPortGetFreeHeapSize());
-    HAL_GPIO_TogglePin(CPU_STA_GPIO_Port, CPU_STA_Pin);
     osDelay(500);
   }
   /* USER CODE END StartDefaultTask */

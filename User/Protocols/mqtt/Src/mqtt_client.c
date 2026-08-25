@@ -34,13 +34,13 @@ void mqtt_client_init(mqtt_client_t *client, mqtt_transport_t *transport) {
     client->rx_len = 0;
     client->rx_expected = 0;
     
-    MQTT_LOG("Client initialized\n");
+    MQTT_LOG("Client initialized");
 }
 
 void mqtt_client_set_callbacks(mqtt_client_t *client, mqtt_callbacks_t *callbacks) {
     if (!client || !callbacks) return;
     memcpy(&client->callbacks, callbacks, sizeof(mqtt_callbacks_t));
-    MQTT_LOG("Callbacks registered\n");
+    MQTT_LOG("Callbacks registered");
 }
 
 void mqtt_client_set_connect_info(mqtt_client_t *client, const char *client_id,
@@ -50,12 +50,12 @@ void mqtt_client_set_connect_info(mqtt_client_t *client, const char *client_id,
     if (client_id) {
         strncpy(client->connect_info.client_id, client_id, MQTT_MAX_CLIENT_ID_LEN - 1);
         client->connect_info.client_id[MQTT_MAX_CLIENT_ID_LEN - 1] = '\0';
-        MQTT_LOG("Client ID: %s\n", client->connect_info.client_id);
+        MQTT_LOG("Client ID: %s", client->connect_info.client_id);
     }
     if (username) {
         strncpy(client->connect_info.username, username, MQTT_MAX_USERNAME_LEN - 1);
         client->connect_info.username[MQTT_MAX_USERNAME_LEN - 1] = '\0';
-        MQTT_LOG("Username: %s\n", client->connect_info.username);
+        MQTT_LOG("Username: %s", client->connect_info.username);
     }
     if (password) {
         strncpy(client->connect_info.password, password, MQTT_MAX_PASSWORD_LEN - 1);
@@ -160,7 +160,7 @@ static int mqtt_build_connect(mqtt_client_t *client, uint8_t *buf, uint16_t *len
     pkt[0] = MQTT_PKT_CONNECT;
     *len = idx;
     
-    MQTT_LOG("Built CONNECT packet, len=%d\n", idx);
+    MQTT_LOG("Built CONNECT packet, len=%d", idx);
     return 0;
 }
 
@@ -213,7 +213,7 @@ static int mqtt_build_publish(mqtt_client_t *client, uint8_t *buf, uint16_t *len
     pkt[0] = MQTT_PKT_PUBLISH | flags;
     
     *len = idx;
-    MQTT_LOG("Built PUBLISH: topic=%s, len=%d, qos=%d\n", topic, idx, qos);
+    MQTT_LOG("Built PUBLISH: topic=%s, len=%d, qos=%d", topic, idx, qos);
     return packet_id;
 }
 
@@ -254,7 +254,7 @@ static int mqtt_build_subscribe(mqtt_client_t *client, uint8_t *buf, uint16_t *l
     
     pkt[0] = MQTT_PKT_SUBSCRIBE | 0x02;
     *len = idx;
-    MQTT_LOG("Built SUBSCRIBE: topic=%s, len=%d\n", topic, idx);
+    MQTT_LOG("Built SUBSCRIBE: topic=%s, len=%d", topic, idx);
     return packet_id;
 }
 
@@ -294,7 +294,7 @@ static int mqtt_build_unsubscribe(mqtt_client_t *client, uint8_t *buf, uint16_t 
     
     pkt[0] = MQTT_PKT_UNSUBSCRIBE | 0x02;
     *len = idx;
-    MQTT_LOG("Built UNSUBSCRIBE: topic=%s, len=%d\n", topic, idx);
+    MQTT_LOG("Built UNSUBSCRIBE: topic=%s, len=%d", topic, idx);
     return packet_id;
 }
 
@@ -305,7 +305,7 @@ static int mqtt_build_pingreq(uint8_t *buf, uint16_t *len) {
     buf[0] = MQTT_PKT_PINGREQ;
     buf[1] = 0x00;
     *len = 2;
-    MQTT_LOG("Built PINGREQ\n");
+    MQTT_LOG("Built PINGREQ");
     return 0;
 }
 
@@ -316,7 +316,7 @@ static int mqtt_build_disconnect(uint8_t *buf, uint16_t *len) {
     buf[0] = MQTT_PKT_DISCONNECT;
     buf[1] = 0x00;
     *len = 2;
-    MQTT_LOG("Built DISCONNECT\n");
+    MQTT_LOG("Built DISCONNECT");
     return 0;
 }
 
@@ -330,13 +330,13 @@ static int mqtt_parse_connack(const uint8_t *data, uint16_t len) {
     uint8_t result = data[3];
     
     if (result == 0) {
-        MQTT_LOG("CONNACK: Success\n");
+        MQTT_LOG("CONNACK: Success");
         return 0;
     } else {
         const char *err[] = {"", "Unacceptable protocol version", "Identifier rejected", 
                              "Server unavailable", "Bad username/password", "Not authorized"};
         const char *msg = (result >= 1 && result <= 5) ? err[result] : "Unknown error";
-        MQTT_LOG("CONNACK: Failed (code=%d): %s\n", result, msg);
+        MQTT_LOG("CONNACK: Failed (code=%d): %s", result, msg);
         return -result;
     }
 }
@@ -377,7 +377,7 @@ static int mqtt_parse_publish(mqtt_client_t *client, const uint8_t *data, uint16
     uint16_t payload_len = remain_len - (idx - 2 - (decoded - 1));
     if (idx + payload_len > len) return -1;
     
-    MQTT_LOG("Received PUBLISH: topic=%s, qos=%d, len=%d\n", topic, qos, payload_len);
+    MQTT_LOG("Received PUBLISH: topic=%s, qos=%d, len=%d", topic, qos, payload_len);
     
     if (client->callbacks.on_message) {
         client->callbacks.on_message(topic, data + idx, payload_len);
@@ -407,7 +407,7 @@ static int mqtt_parse_suback(mqtt_client_t *client, const uint8_t *data, uint16_
     if (idx >= len) return -1;
     uint8_t result = data[idx];
     
-    MQTT_LOG("SUBACK: packet_id=%d, result=%d\n", packet_id, result);
+    MQTT_LOG("SUBACK: packet_id=%d, result=%d", packet_id, result);
     
     if (client->callbacks.on_subscribe) {
         client->callbacks.on_subscribe(NULL, result);
@@ -422,7 +422,7 @@ static int mqtt_parse_suback(mqtt_client_t *client, const uint8_t *data, uint16_
 static int mqtt_parse_pingresp(const uint8_t *data, uint16_t len) {
     if (len < 2) return -1;
     if ((data[0] & 0xF0) != MQTT_PKT_PINGRESP) return -1;
-    MQTT_LOG("Received PINGRESP\n");
+    MQTT_LOG("Received PINGRESP");
     return 0;
 }
 
@@ -431,11 +431,11 @@ static int mqtt_parse_pingresp(const uint8_t *data, uint16_t len) {
 // ===========================
 int mqtt_client_connect(mqtt_client_t *client, uint16_t keepalive, bool clean_session) {
     if (!client) {
-        MQTT_LOG("Connect failed: client NULL\n");
+        MQTT_LOG("Connect failed: client NULL");
         return -1;
     }
     
-    MQTT_LOG("Connecting... keepalive=%d, clean_session=%d\n", keepalive, clean_session);
+    MQTT_LOG("Connecting... keepalive=%d, clean_session=%d", keepalive, clean_session);
     
     client->connect_info.keepalive = keepalive;
     client->connect_info.clean_session = clean_session;
@@ -449,19 +449,19 @@ int mqtt_client_connect(mqtt_client_t *client, uint16_t keepalive, bool clean_se
     if (client->transport.send) {
         int ret = client->transport.send(client->tx_buffer, len);
         if (ret != 0) {
-            MQTT_LOG("Connect send failed, ret=%d\n", ret);
+            MQTT_LOG("Connect send failed, ret=%d", ret);
             client->state = MQTT_STATE_ERROR;
             return -2;
         }
     }
     
-    MQTT_LOG("Connect packet sent, waiting for CONNACK...\n");
+    MQTT_LOG("Connect packet sent, waiting for CONNACK...");
     return 0;
 }
 
 int mqtt_client_disconnect(mqtt_client_t *client) {
     if (!client) return -1;
-    MQTT_LOG("Disconnecting...\n");
+    MQTT_LOG("Disconnecting...");
     
     uint16_t len;
     mqtt_build_disconnect(client->tx_buffer, &len);
@@ -484,15 +484,15 @@ int mqtt_client_publish(mqtt_client_t *client, const char *topic,
                          const uint8_t *payload, uint16_t len,
                          mqtt_qos_t qos, bool retained) {
     if (!client || !topic) {
-        MQTT_LOG("Publish failed: invalid params\n");
+        MQTT_LOG("Publish failed: invalid params");
         return -1;
     }
     if (!client->is_connected) {
-        MQTT_LOG("Publish failed: not connected\n");
+        MQTT_LOG("Publish failed: not connected");
         return -2;
     }
     
-    MQTT_LOG("Publishing: topic=%s, len=%d, qos=%d\n", topic, len, qos);
+    MQTT_LOG("Publishing: topic=%s, len=%d, qos=%d", topic, len, qos);
     
     uint16_t pkt_len;
     int packet_id = mqtt_build_publish(client, client->tx_buffer, &pkt_len,
@@ -501,7 +501,7 @@ int mqtt_client_publish(mqtt_client_t *client, const char *topic,
     if (client->transport.send) {
         int ret = client->transport.send(client->tx_buffer, pkt_len);
         if (ret != 0) {
-            MQTT_LOG("Publish send failed, ret=%d\n", ret);
+            MQTT_LOG("Publish send failed, ret=%d", ret);
             return -3;
         }
     }
@@ -515,15 +515,15 @@ int mqtt_client_publish(mqtt_client_t *client, const char *topic,
 
 int mqtt_client_subscribe(mqtt_client_t *client, const char *topic, mqtt_qos_t qos) {
     if (!client || !topic) {
-        MQTT_LOG("Subscribe failed: invalid params\n");
+        MQTT_LOG("Subscribe failed: invalid params");
         return -1;
     }
     if (!client->is_connected) {
-        MQTT_LOG("Subscribe failed: not connected\n");
+        MQTT_LOG("Subscribe failed: not connected");
         return -2;
     }
     
-    MQTT_LOG("Subscribing: topic=%s, qos=%d\n", topic, qos);
+    MQTT_LOG("Subscribing: topic=%s, qos=%d", topic, qos);
     
     client->state = MQTT_STATE_SUBSCRIBING;
     
@@ -533,7 +533,7 @@ int mqtt_client_subscribe(mqtt_client_t *client, const char *topic, mqtt_qos_t q
     if (client->transport.send) {
         int ret = client->transport.send(client->tx_buffer, pkt_len);
         if (ret != 0) {
-            MQTT_LOG("Subscribe send failed, ret=%d\n", ret);
+            MQTT_LOG("Subscribe send failed, ret=%d", ret);
             return -3;
         }
     }
@@ -545,7 +545,7 @@ int mqtt_client_unsubscribe(mqtt_client_t *client, const char *topic) {
     if (!client || !topic) return -1;
     if (!client->is_connected) return -2;
     
-    MQTT_LOG("Unsubscribing: topic=%s\n", topic);
+    MQTT_LOG("Unsubscribing: topic=%s", topic);
     
     uint16_t pkt_len;
     int packet_id = mqtt_build_unsubscribe(client, client->tx_buffer, &pkt_len, topic);
@@ -575,7 +575,7 @@ int mqtt_client_ping(mqtt_client_t *client) {
     }
     
     client->last_ping_tick = client->transport.get_tick();
-    MQTT_LOG("Ping sent\n");
+    MQTT_LOG("Ping sent");
     return 0;
 }
 
@@ -585,14 +585,14 @@ int mqtt_client_process_rx(mqtt_client_t *client, const uint8_t *data, uint16_t 
     client->last_rx_tick = client->transport.get_tick();
     
     if (client->rx_len + len > MQTT_MAX_PACKET_SIZE) {
-        MQTT_LOG("RX buffer overflow\n");
+        MQTT_LOG("RX buffer overflow");
         return -2;
     }
     
     memcpy(client->rx_buffer + client->rx_len, data, len);
     client->rx_len += len;
     
-    MQTT_LOG("RX: %d bytes (total=%d)\n", len, client->rx_len);
+    MQTT_LOG("RX: %d bytes (total=%d)", len, client->rx_len);
     
     uint32_t idx = 0;
     while (idx < client->rx_len) {
@@ -610,13 +610,13 @@ int mqtt_client_process_rx(mqtt_client_t *client, const uint8_t *data, uint16_t 
                 if (result == 0) {
                     client->is_connected = true;
                     client->state = MQTT_STATE_CONNECTED;
-                    MQTT_LOG("MQTT Connected!\n");
+                    MQTT_LOG("MQTT Connected!");
                     if (client->callbacks.on_connect) {
                         client->callbacks.on_connect();
                     }
                 } else {
                     client->state = MQTT_STATE_ERROR;
-                    MQTT_LOG("MQTT Connection failed\n");
+                    MQTT_LOG("MQTT Connection failed");
                 }
                 break;
             }
@@ -628,7 +628,7 @@ int mqtt_client_process_rx(mqtt_client_t *client, const uint8_t *data, uint16_t 
                 int result = mqtt_parse_suback(client, client->rx_buffer + idx, packet_len);
                 if (result == 0) {
                     client->state = MQTT_STATE_SUBSCRIBED;
-                    MQTT_LOG("Subscribe confirmed\n");
+                    MQTT_LOG("Subscribe confirmed");
                 }
                 break;
             }
@@ -641,10 +641,10 @@ int mqtt_client_process_rx(mqtt_client_t *client, const uint8_t *data, uint16_t 
             case MQTT_PKT_PUBREL:
             case MQTT_PKT_PUBCOMP:
             case MQTT_PKT_UNSUBACK:
-                MQTT_LOG("Received packet type: 0x%02X\n", packet_type);
+                MQTT_LOG("Received packet type: 0x%02X", packet_type);
                 break;
             default:
-                MQTT_LOG("Unknown packet type: 0x%02X\n", packet_type);
+                MQTT_LOG("Unknown packet type: 0x%02X", packet_type);
                 break;
         }
         
@@ -668,12 +668,12 @@ void mqtt_client_loop(mqtt_client_t *client) {
     uint32_t now = client->transport.get_tick();
     
     if (now - client->last_ping_tick > (client->connect_info.keepalive * 1000 / 2)) {
-        MQTT_LOG("Keepalive: sending ping\n");
+        MQTT_LOG("Keepalive: sending ping");
         mqtt_client_ping(client);
     }
     
     if (now - client->last_rx_tick > (client->connect_info.keepalive * 1000 * 2)) {
-        MQTT_LOG("Keepalive timeout, disconnecting\n");
+        MQTT_LOG("Keepalive timeout, disconnecting");
         client->is_connected = false;
         client->state = MQTT_STATE_DISCONNECTED;
         if (client->callbacks.on_disconnect) {

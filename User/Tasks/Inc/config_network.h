@@ -1,12 +1,12 @@
 /**
- * network_config.h — Centralized network configuration for SmartHome
+ * config_network.h — Centralized network configuration for SmartHome
  *
  * All WiFi, MQTT, IP, and port settings are managed here.
  * Include this header wherever network parameters are needed.
  */
 
-#ifndef __NETWORK_CONFIG_H
-#define __NETWORK_CONFIG_H
+#ifndef __CONFIG_NETWORK_H
+#define __CONFIG_NETWORK_H
 
 /*===========================================================================
  * WiFi STA (Station Mode) Credentials
@@ -79,4 +79,4 @@
 #define RESPONSE_TIMEOUT    2000
 #define CONNECTION_TIMEOUT  "0"
 
-#endif /* __NETWORK_CONFIG_H */
+#endif /* __CONFIG_NETWORK_H */

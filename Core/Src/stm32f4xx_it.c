@@ -22,8 +22,7 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "hlk_rm58s_port.h"
-#include "hlk_rm58s_driver.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -250,12 +249,5 @@ void USART6_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
-  HLK_UART_TxCpltCallback(huart);
-}
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-{
-  HLK_UARTEx_RxEventCallback(huart, Size);
-}
 /* USER CODE END 1 */
