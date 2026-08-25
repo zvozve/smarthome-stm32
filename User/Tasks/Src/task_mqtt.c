@@ -14,6 +14,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+// 连接超时：发出 CONNECT 后若这么久没收到 CONNACK，则判定失败并重试
+#define MQTT_CONNECT_TIMEOUT_MS   5000
+
 // ===========================
 // 内部状态
 // ===========================
@@ -37,6 +40,9 @@ typedef struct {
     /* 延迟发送标志：RX 回调上下文里禁止 TX（uart_drv locked=1 时
      * uart_drv_send 返回 -3），故需要在 MQTT 任务上下文（locked=0）补发 */
     bool pending_status_send;
+
+    /* CONNECT 发出时刻，用于 CONNACK 超时看门狗 */
+    uint32_t connect_start_tick;
 } mqtt_task_context_t;
 
 static mqtt_task_context_t g_ctx = {0};
@@ -167,8 +173,20 @@ static void mqtt_on_state_change(mqtt_task_state_t state) {
 // MQTT连接
 // ===========================
 static void mqtt_task_connect(void) {
+    /* 防重入：已在连接/已连接/订阅/就绪中，禁止再发第二个 CONNECT。
+     * 否则同一 ClientID 的第二个 CONNECT 会让 broker 踢掉上一个会话，
+     * 造成 EMQX 显示离线、固件却认为在线的假象。 */
+    if (g_ctx.state >= MQTT_TASK_CONNECTING) return;
+
     MQTT_LOG("Connecting to %s:%d", MQTT_BROKER_IP, MQTT_BROKER_PORT);
     g_ctx.state = MQTT_TASK_CONNECTING;
+
+    /* 新的连接尝试开始：关闭自动重连闩锁（避免 process 循环里的
+     * auto_reconnect 分支在 startup 遗留的旧 reconnect_tick 驱动下
+     * 立即再发一次 CONNECT）*/
+    g_ctx.auto_reconnect = false;
+    g_ctx.reconnect_retry = 0;
+    g_ctx.connect_start_tick = mqtt_tick_callback();
 
     mqtt_on_state_change(g_ctx.state);
 
@@ -183,7 +201,7 @@ static void mqtt_task_connect(void) {
         g_ctx.state = MQTT_TASK_ERROR;
         g_ctx.auto_reconnect = true;
         g_ctx.reconnect_tick = mqtt_tick_callback();
-        g_ctx.reconnect_retry++;
+        g_ctx.reconnect_retry = 0;
     }
 }
 
@@ -226,6 +244,18 @@ static void mqtt_task_process(void) {
 
     if (g_ctx.state == MQTT_TASK_WAIT_WIFI || g_ctx.state == MQTT_TASK_IDLE) {
         mqtt_task_connect();
+        return;
+    }
+
+    /* CONNECTING：等待 CONNACK（由 RX 回调推进到 CONNECTED）。
+     * 若超时仍未收到，则转入 ERROR 触发重连，避免永远卡在 CONNECTING。 */
+    if (g_ctx.state == MQTT_TASK_CONNECTING) {
+        if (now - g_ctx.connect_start_tick > MQTT_CONNECT_TIMEOUT_MS) {
+            MQTT_LOG("CONNACK timeout, retry");
+            g_ctx.state = MQTT_TASK_ERROR;
+            g_ctx.auto_reconnect = true;
+            g_ctx.reconnect_tick = now;
+        }
         return;
     }
 
