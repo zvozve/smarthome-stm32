@@ -47,7 +47,9 @@ file(GLOB_RECURSE USER_SOURCES
     "User/BSP/bsp_dwt/Src/*.c"
     "User/BSP/bsp_gpio/Src/*.c"
     "User/BSP/bsp_uart/Src/*.c"
+    "User/Hardware/heart_beat/Src/*.c"
     "User/Hardware/hlk_rm58s/Src/*.c"
+    "User/Hardware/lan8720a/Src/*.c"
     "User/MiddleWare/SEGGER_RTT/Src/*.c"
     "User/Protocols/cJSON/Src/*.c"
     "User/Protocols/mqtt/Src/*.c"
@@ -69,7 +71,9 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User/BSP/bsp_gpio/Inc
     User/BSP/bsp_uart/Inc
     User/BSP/platform/Inc
+    User/Hardware/heart_beat/Inc
     User/Hardware/hlk_rm58s/Inc
+    User/Hardware/lan8720a/Inc
     User/MiddleWare/SEGGER_RTT/Inc
     User/Protocols/cJSON/Inc
     User/Protocols/mqtt/Inc
