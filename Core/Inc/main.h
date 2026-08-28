@@ -59,6 +59,9 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define DHT11_DAT_Pin GPIO_PIN_2
 #define DHT11_DAT_GPIO_Port GPIOE
+#define VS1838B_DAT_Pin GPIO_PIN_5
+#define VS1838B_DAT_GPIO_Port GPIOE
+#define VS1838B_DAT_EXTI_IRQn EXTI9_5_IRQn
 #define CPU_STA_Pin GPIO_PIN_13
 #define CPU_STA_GPIO_Port GPIOC
 #define WIFI_STS_Pin GPIO_PIN_14

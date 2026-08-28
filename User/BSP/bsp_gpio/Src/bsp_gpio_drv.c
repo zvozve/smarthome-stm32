@@ -251,8 +251,7 @@ void bsp_gpio_irq_dispatch(uint16_t GPIO_Pin)
 
         GPIO_PinState now  = HAL_GPIO_ReadPin(reg->port, reg->pin);
         GPIO_PinState last = (GPIO_PinState)reg->last_level;
-        reg->last_level    = (uint8_t)now;
-
+        
         /* 边沿检测 */
         uint8_t detected = 0;
         if (last == GPIO_PIN_RESET && now == GPIO_PIN_SET) {
@@ -260,17 +259,17 @@ void bsp_gpio_irq_dispatch(uint16_t GPIO_Pin)
         } else if (last == GPIO_PIN_SET && now == GPIO_PIN_RESET) {
             detected = BSP_GPIO_EDGE_FALLING;
         } else {
+            /* 电平未变化，更新 last_level 并跳过 */
+            reg->last_level = (uint8_t)now;
             continue;
         }
 
+        /* 更新最后电平状态 */
+        reg->last_level = (uint8_t)now;
+
         if ((reg->edge & detected) == 0) continue;
 
-        /* 有效电平过滤 */
-        if (reg->active_level != BSP_GPIO_IRQ_LEVEL_ANY) {
-            if (now != (GPIO_PinState)reg->active_level) continue;
-        }
-
-        /* 软件防抖 */
+        /* 防抖检查 */
         if (reg->debounce_us > 0) {
             uint32_t now_cycle = bsp_GetCycleCount();
             if (bsp_GetElapsedUS(reg->last_active, now_cycle) < reg->debounce_us) {

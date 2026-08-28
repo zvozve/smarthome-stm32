@@ -50,9 +50,12 @@ file(GLOB_RECURSE USER_SOURCES
     "User/Hardware/dht11/Src/*.c"
     "User/Hardware/heart_beat/Src/*.c"
     "User/Hardware/hlk_rm58s/Src/*.c"
+    "User/Hardware/ir_1838b/Src/*.c"
+    "User/Hardware/ir_tx/Src/*.c"
     "User/Hardware/lan8720a/Src/*.c"
     "User/MiddleWare/SEGGER_RTT/Src/*.c"
     "User/Protocols/cJSON/Src/*.c"
+    "User/Protocols/ac_codec/Src/*.c"
     "User/Protocols/mqtt/Src/*.c"
     "User/Protocols/wol/Src/*.c"
     "User/Tasks/Src/*.c"
@@ -75,9 +78,12 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User/Hardware/dht11/Inc
     User/Hardware/heart_beat/Inc
     User/Hardware/hlk_rm58s/Inc
+    User/Hardware/ir_1838b/Inc
+    User/Hardware/ir_tx/Inc
     User/Hardware/lan8720a/Inc
     User/MiddleWare/SEGGER_RTT/Inc
     User/Protocols/cJSON/Inc
+    User/Protocols/ac_codec/Inc
     User/Protocols/mqtt/Inc
     User/Protocols/wol/Inc
     User/Tasks/Inc

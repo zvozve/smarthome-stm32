@@ -4,15 +4,16 @@
  */
 
 #include "app_main.h"
-#include "task_temperature.h"
-#include "task_wifi.h"
-#include "task_mqtt.h"
+
 #include "bsp_dwt.h"
-#include "bsp_gpio_drv.h"          // 新增
+
 #include "heart_beat.h"
 #include "lan8720a_reset.h"
-#include "SEGGER_RTT_Log.h"
-#include "main.h"                  // 确保有 DHT11_DAT_GPIO_Port / Pin
+
+#include "task_wifi.h"
+#include "task_mqtt.h"
+#include "task_temperature.h"
+#include "task_ir.h"
 
 /* ===========================
  * 应用初始化
@@ -24,6 +25,9 @@ void app_main_init(void) {
     APP_LOG("========================================");
     APP_LOG("System initializing...");
     APP_LOG("FIRMWARE_VERSION: %s", FIRMWARE_VERSION);
+
+    /* 注意：PE5 的中断回调由 IR1838B_Init 统一注册，
+     * 不要在这里重复注册（同一引脚后注册会覆盖先注册者）。 */
 
     app_main_create_tasks();
 
@@ -43,13 +47,18 @@ void app_main_create_tasks(void) {
     //     APP_LOG("ERROR: WiFi task create failed");
     // }
 
-    // /* MQTT 任务依赖 WiFi 任务提供的收发接口；先建 WiFi，再启 MQTT */
     // Task_MQTT_Init();
     // APP_LOG("MQTT task init done");
 
-    /* 临时禁用温度任务，用于 GPIO 翻转测试 */
-    Task_Temperature_Init();
-    APP_LOG("Temperature task init done");
+    // Task_Temperature_Init();
+    // APP_LOG("Temperature task init done");
+
+    /* IR 任务：1838B 接收（TIM6 静默收尾）+ 红外发射（TIM9 载波） */
+    if (Task_IR_Init()) {
+        APP_LOG("IR task created");
+    } else {
+        APP_LOG("ERROR: IR task create failed");
+    }
 
     APP_LOG("All tasks created");
 }
@@ -72,6 +81,14 @@ void app_main_task(void) {
             heart_beat_run();
         }
 
-        osDelay(500);   // 200ms 翻转一次，方便示波器观察（频率 2.5Hz）
+        /* 周期性打印引脚电平状态 */
+        static uint32_t last_print = 0;
+        if (now - last_print >= 3000) {
+            last_print = now;
+            uint8_t level = HAL_GPIO_ReadPin(VS1838B_DAT_GPIO_Port, VS1838B_DAT_Pin);
+            APP_LOG("IR pin level: %d (idle should be 1)", level);
+        }
+
+        osDelay(100);
     }
 }

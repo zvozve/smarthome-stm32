@@ -27,6 +27,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "ir_1838b.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -177,7 +178,11 @@ void SystemClock_Config(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
-
+  if (htim->Instance == TIM6)
+  {
+      /* 红外接收：静默超时收尾（帧结束检测） */
+      IR1838B_Tick1ms();
+  }
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM14)
   {

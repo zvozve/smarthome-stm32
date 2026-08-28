@@ -10,7 +10,7 @@
 #include "SEGGER_RTT_Log.h"
 #define APP_LOG(fmt, ...)     RTT_LOG_TAG(APP_LOG_ENABLE,    "APP",    fmt, ##__VA_ARGS__)
 
-#define FIRMWARE_VERSION  "V1.0.1/2026-07-15"
+#define FIRMWARE_VERSION  "V1.1.1/2026-08-25"
 
 void app_main_init(void);
 void app_main_create_tasks(void);
