@@ -43,22 +43,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 )
 
 file(GLOB_RECURSE USER_SOURCES
-    "User/App/Src/*.c"
-    "User/BSP/bsp_dwt/Src/*.c"
-    "User/BSP/bsp_gpio/Src/*.c"
-    "User/BSP/bsp_uart/Src/*.c"
-    "User/Hardware/dht11/Src/*.c"
-    "User/Hardware/heart_beat/Src/*.c"
-    "User/Hardware/hlk_rm58s/Src/*.c"
-    "User/Hardware/ir_1838b/Src/*.c"
-    "User/Hardware/ir_tx/Src/*.c"
-    "User/Hardware/lan8720a/Src/*.c"
-    "User/MiddleWare/SEGGER_RTT/Src/*.c"
-    "User/Protocols/cJSON/Src/*.c"
-    "User/Protocols/ac_codec/Src/*.c"
-    "User/Protocols/mqtt/Src/*.c"
-    "User/Protocols/wol/Src/*.c"
-    "User/Tasks/Src/*.c"
+    "User/Src/*.c"
 )
 
 # Add sources to executable
@@ -67,26 +52,16 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${USER_SOURCES}
 )
 
+# mystm32-sdk 组件（sdk.toml 拉取至 MySDK/，源文件与头文件清单由 SDK 自带的
+# CMakeLists.txt 维护并随拉取更新；须位于 add_subdirectory(cmake/stm32cubemx)
+# 之后——组件需要其中的 stm32cubemx INTERFACE 目标获取 HAL/RTOS/LwIP 依赖）
+add_subdirectory(MySDK)
+
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
-    User/App/Inc
-    User/BSP/bsp_dwt/Inc
-    User/BSP/bsp_gpio/Inc
-    User/BSP/bsp_uart/Inc
-    User/BSP/platform/Inc
-    User/Hardware/dht11/Inc
-    User/Hardware/heart_beat/Inc
-    User/Hardware/hlk_rm58s/Inc
-    User/Hardware/ir_1838b/Inc
-    User/Hardware/ir_tx/Inc
-    User/Hardware/lan8720a/Inc
-    User/MiddleWare/SEGGER_RTT/Inc
-    User/Protocols/cJSON/Inc
-    User/Protocols/ac_codec/Inc
-    User/Protocols/mqtt/Inc
-    User/Protocols/wol/Inc
-    User/Tasks/Inc
+    User                          # board_cfg.h（sdk.toml: board_cfg = "User/board_cfg.h"）
+    User/Inc
 )
 
 # Add project symbols (macros)
@@ -100,16 +75,22 @@ list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
+    mystm32
 
     # Add user defined libraries
 )
 
-# 排除 LwIP 的 MQTT 源码（避免与手写冲突）
+# 排除 LwIP 自带 MQTT 应用：其 mqtt_client_connect / mqtt_client_is_connected
+# 与 User/mystm32-sdk/protocols/mqtt 的同名符号在链接期冲突；
+# 工程统一使用 SDK 的 MQTT 实现，LwIP 的 apps/mqtt 不参与链接。
+# 注意放在 add_subdirectory(cmake/stm32cubemx) 之后（此处即满足）。
 if(TARGET LwIP)
     get_target_property(LWIP_SOURCES LwIP SOURCES)
-    list(FILTER LWIP_SOURCES EXCLUDE REGEX "/apps/mqtt/mqtt\\.c$")
-    set_target_properties(LwIP PROPERTIES SOURCES "${LWIP_SOURCES}")
-    message(STATUS "Excluded LwIP mqtt.c to avoid conflict")
+    if(LWIP_SOURCES)
+        list(FILTER LWIP_SOURCES EXCLUDE REGEX "/apps/mqtt/mqtt\\.c$")
+        set_target_properties(LwIP PROPERTIES SOURCES "${LWIP_SOURCES}")
+        message(STATUS "Excluded LwIP apps/mqtt/mqtt.c (clashes with mystm32-sdk protocols/mqtt)")
+    endif()
 endif()
 
 # 编译后自动生成 .hex 和 .bin 文件

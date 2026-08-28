@@ -1,0 +1,27 @@
+# SmartHome 工程 SDK 拉取配置
+# 用法: python <SDK>/tools/sync_lib.py sdk.toml
+# 显式选择的模块；depends 闭包由脚本自动补全（如 chip.platform）
+
+sdk       = "C:/Container/Applications/Dev_STM32/mystm32-sdk"
+dest      = "MySDK"
+board_cfg = "User/board_cfg.h"
+
+[modules]
+# ---- chip：MCU 片上外设 OOP 封装 ----
+"chip.oop_dwt"   = true   # DWT 微秒延时
+"chip.oop_gpio"  = true   # GPIO 抽象（含中断回调）
+"chip.oop_uart"  = true   # UART 驱动（hlk-rm58s 用）
+"chip.platform"  = true   # HAL 统一入口（系列宏）
+
+# ---- devices：板载外挂器件 ----
+"devices.dht11"      = true   # 温湿度（task_temperature）
+"devices.heart_beat" = true   # 心跳 LED（app）
+"devices.hlk_rm58s"  = true   # WiFi 模组（task_wifi）
+"devices.ir_1838b"   = true   # 红外接收（task_ir）
+"devices.ir_tx"      = true   # 红外发射（task_ir）
+"devices.lan8720a"   = true   # ETH PHY 复位（app）
+
+# ---- protocols：协议/算法 ----
+"protocols.ac_codec" = true   # 空调红外编码（task_ir）
+"protocols.mqtt"     = true   # MQTT 客户端（task_mqtt / business_mqtt）
+"protocols.wol"      = true   # Wake-on-LAN（business_mqtt）
