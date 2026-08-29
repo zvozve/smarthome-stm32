@@ -15,13 +15,14 @@
         {
             "label": "Build & Flash",
             "type": "shell",
-            "command": "${workspaceFolder}/.tools/flash.bat",
+            "command": "${workspaceFolder}/../../../../Applications/Dev_STM32/my-stm32-sdk/.sdktool/flash.bat",
             "args": [
                 "${config:jlink.root}",
                 "${command:cmake.launchTargetPath}",
                 "${config:jlink.device}",
                 "${config:jlink.interface}",
-                "${config:jlink.speed}"
+                "${config:jlink.speed}",
+                "${workspaceFolder}"
             ],
             "group": "build",
             "presentation": {
@@ -33,13 +34,14 @@
         {
             "label": "Flash",
             "type": "shell",
-            "command": "${workspaceFolder}/.tools/flash.bat",
+            "command": "${workspaceFolder}/../../../../Applications/Dev_STM32/my-stm32-sdk/.sdktool/flash.bat",
             "args": [
                 "${config:jlink.root}",
                 "${command:cmake.getLaunchTargetPath}",
                 "${config:jlink.device}",
                 "${config:jlink.interface}",
-                "${config:jlink.speed}"
+                "${config:jlink.speed}",
+                "${workspaceFolder}"
             ],
             "group": {
                 "kind": "build",
