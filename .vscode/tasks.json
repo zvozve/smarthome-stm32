@@ -15,8 +15,9 @@
         {
             "label": "Build & Flash",
             "type": "shell",
-            "command": "${workspaceFolder}/../../../../Applications/Dev_STM32/my-stm32-sdk/.sdktool/flash.bat",
+            "command": "python",
             "args": [
+                "${workspaceFolder}/sdk_run.py", "flash",
                 "${config:jlink.root}",
                 "${command:cmake.launchTargetPath}",
                 "${config:jlink.device}",
@@ -34,8 +35,9 @@
         {
             "label": "Flash",
             "type": "shell",
-            "command": "${workspaceFolder}/../../../../Applications/Dev_STM32/my-stm32-sdk/.sdktool/flash.bat",
+            "command": "python",
             "args": [
+                "${workspaceFolder}/sdk_run.py", "flash",
                 "${config:jlink.root}",
                 "${command:cmake.getLaunchTargetPath}",
                 "${config:jlink.device}",
@@ -47,6 +49,30 @@
                 "kind": "build",
                 "isDefault": true
             },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Pull SDK",
+            "type": "shell",
+            "command": "python",
+            "args": [ "${workspaceFolder}/sdk_run.py", "pull" ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "OOP Audit",
+            "type": "shell",
+            "command": "python",
+            "args": [ "${workspaceFolder}/sdk_run.py", "audit" ],
+            "group": "build",
             "presentation": {
                 "reveal": "always",
                 "panel": "shared"

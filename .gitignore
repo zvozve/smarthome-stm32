@@ -11,6 +11,6 @@ build
 Old
 
 *.py
-# 工程工具脚本需受版本控制
-!.sdktool/pull_sdk.py
+# 工程接口桥（读 sdk.toml 调 SDK tools），需受版本控制
+!/sdk_run.py
 path.md
