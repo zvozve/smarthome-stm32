@@ -9,6 +9,8 @@
 
 build
 Old
+# 由 sync_lib.py 每次 rmtree 重建，属生成物，不进版本库
+MySDK/
 
 *.py
 # 工程接口桥（读 sdk.toml 调 SDK tools），需受版本控制
