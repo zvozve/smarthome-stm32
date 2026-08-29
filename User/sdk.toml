@@ -4,7 +4,7 @@
 # 本文件与 board_cfg.h 同置于 User/（均为工程侧资产，不会被 sync 覆盖）；
 # dest 用 ../MySDK 使生成目录仍落在工程根（根 CMakeLists 的 add_subdirectory(MySDK) 不动）。
 
-sdk       = "C:/Container/Applications/Dev_STM32/my-stm32-sdk"
+sdk       = "C:/Container/Applications/Dev_STM32/mystm32-sdk"
 dest      = "../MySDK"
 board_cfg = "board_cfg.h"
 
