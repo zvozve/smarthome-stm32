@@ -57,6 +57,14 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 # 之后——组件需要其中的 stm32cubemx INTERFACE 目标获取 HAL/RTOS/LwIP 依赖）
 add_subdirectory(MySDK)
 
+# 让 mystm32 组件读取工程侧 board_cfg.h 的功能开关（SDK 内 MB_BOARD_CFG opt-in 机制）
+# 须含 User/（board_cfg.h 本体）与 User/Inc/（board_cfg.h 传递包含 config_network.h）
+target_include_directories(mystm32 PUBLIC
+    ${CMAKE_SOURCE_DIR}/User
+    ${CMAKE_SOURCE_DIR}/User/Inc
+)
+target_compile_definitions(mystm32 PUBLIC MB_BOARD_CFG)
+
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths

@@ -24,10 +24,11 @@ extern "C" {
 
 /* ========== 绑定区 ========== */
 
-/* ---- 心跳 LED（CPU_STA, PC13）+ 看门狗（本工程未启用 IWDG → NULL） ---- */
+/* ---- 心跳 LED（CPU_STA, PC13）+ 看门狗（本工程未启用 IWDG） ---- */
 #define BOARD_HEART_LED_PORT    CPU_STA_GPIO_Port
 #define BOARD_HEART_LED_PIN     CPU_STA_Pin
-#define BOARD_HEART_IWDG        NULL
+#define BOARD_HEART_IWDG        NULL          /* app 仍传 NULL（运行时安全空操作） */
+#define BOARD_HEART_IWDG_ENABLE 0             /* 经 MB_BOARD_CFG 由 SDK heart_beat 读取：0=不引 oop_iwdg_drv.h、不喂狗 */
 
 /* ---- 红外接收 1838B（VS1838B_DAT, PE5）+ 1ms 节拍 TIM6 ---- */
 #define BOARD_IR_RX_PORT        VS1838B_DAT_GPIO_Port
