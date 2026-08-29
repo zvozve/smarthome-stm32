@@ -1,4 +1,4 @@
-# .tool —— SmartHome 工程本地工具
+# .sdktool —— SmartHome 工程本地工具
 
 本目录存放工程侧的本地辅助脚本（**不参与固件编译**，仅在 PC 上运行）。
 
@@ -18,17 +18,17 @@ SDK 是单源真相仓库，工程里的 `MySDK/` 是 `sync_lib.py` 镜像出来
 
 ```bash
 # 方式一：Windows 直接跑 bat（推荐）
-.\.tool\pull_sdk.bat
+.\.sdktool\pull_sdk.bat
 
 # 方式二：直接用 python（Git Bash / PowerShell / CMD 均可）
-python .tool/pull_sdk.py
+python .sdktool/pull_sdk.py
 
 # 演习：只打印将要做什么，不写盘
-python .tool/pull_sdk.py --dry-run
+python .sdktool/pull_sdk.py --dry-run
 
 # 指定别的 toml / 覆盖 SDK 根
-python .tool/pull_sdk.py --toml path/to/sdk.toml
-python .tool/pull_sdk.py --sdk C:/path/to/my-stm32-sdk
+python .sdktool/pull_sdk.py --toml path/to/sdk.toml
+python .sdktool/pull_sdk.py --sdk C:/path/to/my-stm32-sdk
 ```
 
 ## 前置条件
@@ -53,7 +53,7 @@ python .tool/pull_sdk.py --sdk C:/path/to/my-stm32-sdk
 
 ```
 SmartHome/
-├── .tool/            # 本目录（本地工具，不进固件构建）
+├── .sdktool/            # 本目录（本地工具，不进固件构建）
 │   ├── pull_sdk.py
 │   └── pull_sdk.bat
 ├── User/
