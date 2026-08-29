@@ -81,7 +81,6 @@ static void task_temperature_entry(void *arg)
     TickType_t last_wake = xTaskGetTickCount();
     DHT11_Data_t dht_data;
 
-    DHT11_Init(BOARD_DHT11_PORT, BOARD_DHT11_PIN);
     DBG_LOG("[Temp] Task started");
     vTaskDelay(pdMS_TO_TICKS(1500));
     
@@ -110,6 +109,9 @@ bool Task_Temperature_Init(void)
         DBG_LOG("[Temp] Mutex create failed");
         /* 继续运行，只是没有保护 */
     }
+
+    /* 设备初始化收口到 Task_X_Init（各任务自治，不在任务体内 init） */
+    DHT11_Init(BOARD_DHT11_PORT, BOARD_DHT11_PIN);
 
     if (xTaskCreate(task_temperature_entry, TEMP_TASK_NAME,
                     TEMP_TASK_STACK_SIZE, NULL,

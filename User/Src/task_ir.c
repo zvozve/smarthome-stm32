@@ -79,19 +79,6 @@ static void task_ir_entry(void *arg)
 
     ir_raw_frame_t frame;
 
-    /* 初始化 1838B：注入引脚 + 1ms 节拍 TIM 句柄（TIM6, CubeMX 配 84MHz/84/1000） */
-    if (!IR1838B_Init(BOARD_IR_RX_PORT, BOARD_IR_RX_PIN, BOARD_IR_RX_TIM)) {
-        DBG_LOG("[IR] 1838B init failed");
-        vTaskDelete(NULL);
-        return;
-    }
-
-    /* 初始化红外发射（按 board_cfg 注入引脚/TIM9/载波参数） */
-    static const ir_tx_cfg_t s_ir_tx_cfg = BOARD_IR_TX_CFG;
-    if (!IR_TX_Init(&s_ir_tx_cfg)) {
-        DBG_LOG("[IR] TX init failed");
-    }
-
     DBG_LOG("[IR] Task started, waiting IR signal...");
 
     while (1) {
@@ -121,6 +108,17 @@ bool Task_IR_Init(void)
     g_mutex = osMutexNew(NULL);
     if (g_mutex == NULL) {
         DBG_LOG("[IR] Mutex create failed");
+    }
+
+    /* 设备初始化收口到 Task_X_Init（各任务自治，不在任务体内 init） */
+    static const ir_tx_cfg_t s_ir_tx_cfg = BOARD_IR_TX_CFG;
+    if (!IR1838B_Init(BOARD_IR_RX_PORT, BOARD_IR_RX_PIN, BOARD_IR_RX_TIM)) {
+        DBG_LOG("[IR] 1838B init failed");
+        return false;
+    }
+    if (!IR_TX_Init(&s_ir_tx_cfg)) {
+        DBG_LOG("[IR] TX init failed");
+        return false;
     }
 
     if (xTaskCreate(task_ir_entry,

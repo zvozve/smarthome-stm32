@@ -7,7 +7,7 @@
  * 规则：
  *   - 全工程（User/ 下）唯一允许 include CubeMX 生成头
  *     （main.h / usart.h / tim.h ...）的地方就是本文件；
- *     SDK（User/mystm32-sdk/）不做任何绑定。
+ *     SDK（MySDK/）不做任何绑定。
  *   - app / tasks 只引用本文件的绑定宏，不直接引用 MX 符号。
  *   - 换板只改本文件（引脚、句柄、时钟），SDK 与业务代码不动。
  *

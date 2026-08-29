@@ -40,20 +40,19 @@ void app_main_init(void) {
 /* ===========================
  * 创建所有任务
  * =========================== */
+/* ===========================
+ * 心跳设备初始化（无独立任务，仅 init；运行在 app_main_task 循环里 toggle）
+ * =========================== */
+static void Task_HeartBeat_Init(void) {
+    heart_beat_init(BOARD_HEART_LED_PORT, BOARD_HEART_LED_PIN, BOARD_HEART_IWDG);
+}
+
 void app_main_create_tasks(void) {
     APP_LOG("app_main_create_tasks");
 
-    // if (Task_WiFi_init()) {
-    //     APP_LOG("WiFi task created");
-    // } else {
-    //     APP_LOG("ERROR: WiFi task create failed");
-    // }
-
-    // Task_MQTT_Init();
-    // APP_LOG("MQTT task init done");
-
-    // Task_Temperature_Init();
-    // APP_LOG("Temperature task init done");
+    /* 统一任务调用接口：各设备初始化收口到对应 Task_X_Init，
+       由本函数统一调用；任务体只跑逻辑、不再各自 init 设备。 */
+    Task_HeartBeat_Init();          /* 心跳 LED + 喂狗 */
 
     /* IR 任务：1838B 接收（TIM6 静默收尾）+ 红外发射（TIM9 载波） */
     if (Task_IR_Init()) {
@@ -61,6 +60,12 @@ void app_main_create_tasks(void) {
     } else {
         APP_LOG("ERROR: IR task create failed");
     }
+
+    /* 以下任务当前未启用，保持注释；其 Task_X_Init 已统一为"init+建任务"模式，
+       启用时直接去掉注释即可，无需再在任务体内补 init。 */
+    // if (Task_Temperature_Init()) { APP_LOG("Temperature task init done"); }
+    // if (Task_WiFi_init())        { APP_LOG("WiFi task created"); }
+    // Task_MQTT_Init();
 
     APP_LOG("All tasks created");
 }
@@ -72,7 +77,6 @@ void app_main_task(void) {
     osDelay(500);
 
     APP_LOG("Default task started");
-    heart_beat_init(BOARD_HEART_LED_PORT, BOARD_HEART_LED_PIN, BOARD_HEART_IWDG);
 
     while (1) {
         /* 心跳 */

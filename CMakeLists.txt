@@ -60,7 +60,7 @@ add_subdirectory(MySDK)
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
-    User                          # board_cfg.h（sdk.toml: board_cfg = "User/board_cfg.h"）
+    User                          # board_cfg.h（sdk.toml: board_cfg = "board_cfg.h"，与 sdk.toml 同位于 User/）
     User/Inc
 )
 
@@ -81,7 +81,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 )
 
 # 排除 LwIP 自带 MQTT 应用：其 mqtt_client_connect / mqtt_client_is_connected
-# 与 User/mystm32-sdk/protocols/mqtt 的同名符号在链接期冲突；
+# 与 MySDK/protocols/mqtt 的同名符号在链接期冲突；
 # 工程统一使用 SDK 的 MQTT 实现，LwIP 的 apps/mqtt 不参与链接。
 # 注意放在 add_subdirectory(cmake/stm32cubemx) 之后（此处即满足）。
 if(TARGET LwIP)
