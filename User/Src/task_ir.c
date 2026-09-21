@@ -1,14 +1,15 @@
 /**
  * @file    task_ir.c
- * @brief   红外控制任务实现
- * @version V1.0
- * @date    2026-08-25
+ * @brief   红外控制任务实现（接收：SDK ir_receiver；发射：SDK ir_transmitter）
+ * @version V2.0
+ * @date    2026-09-21
  */
 
 #include "task_ir.h"
-#include "board_cfg.h"     /* 工程侧绑定：IR_RX 引脚/TIM、IR_TX 配置 */
-#include "ir_1838b.h"
-#include "ir_tx.h"
+#include "board_cfg.h"     /* IR 定时器绑定宏 */
+#include "ir_receiver.h"
+#include "ir_transmitter.h"
+#include "ac_codec.h"
 #include "SEGGER_RTT_Log.h"
 #include <string.h>
 
@@ -17,6 +18,11 @@
 static bool             g_initialized   = false;
 static TaskHandle_t     g_task_handle   = NULL;
 static osMutexId_t      g_mutex         = NULL;
+
+/* 接收实例 + 时长缓冲（缓冲由 board_cfg 的 BOARD_IR_RX_BUF_SIZE 决定） */
+static uint16_t         s_rx_buf[BOARD_IR_RX_BUF_SIZE];
+static ir_receiver_t    g_ir_rx;
+static ir_transmitter_t g_ir_tx;
 
 /* 接收数据缓存 */
 static IR_RecvData_t    g_recv_data = {
@@ -33,14 +39,19 @@ static uint32_t status_cnt = 0;
 
 /* ========== 内部函数 ========== */
 
-static void update_recv_data(const ir_raw_frame_t *raw)
+/* 把 SDK 接收驱动刚收完的一帧拷贝到线程安全的缓存 */
+static void update_recv_data(void)
 {
     if (g_mutex != NULL) {
         osMutexAcquire(g_mutex, osWaitForever);
     }
 
-    if (raw != NULL && raw->valid) {
-        memcpy(&g_recv_data.raw, raw, sizeof(ir_raw_frame_t));
+    uint16_t cnt = ir_receiver_count(&g_ir_rx);
+    if (cnt > 0U) {
+        const uint16_t *src = ir_receiver_data(&g_ir_rx);
+        uint16_t n = (cnt > BOARD_IR_RX_BUF_SIZE) ? BOARD_IR_RX_BUF_SIZE : cnt;
+        memcpy(g_recv_data.timings, src, n * sizeof(uint16_t));
+        g_recv_data.count     = n;
         g_recv_data.has_new   = true;
         g_recv_data.timestamp = HAL_GetTick();
     }
@@ -57,36 +68,32 @@ static void process_send_request(void)
     }
 
     /* ========== 待接入：MQTT 指令 → 空调红外编码 ========== */
-    /*
-     * 红外发射驱动已就绪（ir_tx.h，TIM9 38kHz 载波），接入流程：
-     * 1. 解析 g_send_buf 内容（MQTT 下发的语义指令，如 "26度/制冷/自动风"）
-     * 2. 根据指令选择对应空调协议编码，或取出学习阶段保存的 raw 时序
-     * 3. 调用重放接口发出波形，例如：
-     *      IR_TX_SendRaw(raw.timing_us, raw.edges, raw.level_start, 1, 0);
-     */
-
     SYS_LOG("[IR] Send request received, len=%u (codec not implemented yet)", g_send_len);
 
     g_send_req = false;
     g_send_len = 0;
 }
 
-/* ========== 任务入口 ========== */
+/* ========== 对外 API ========== */
+
+/* 由 Core 的 HAL_TIM_IC_CaptureCallback 调用 */
+void task_ir_rx_isr(void)
+{
+    ir_receiver_isr(&g_ir_rx);
+}
 
 static void task_ir_entry(void *arg)
 {
     (void)arg;
 
-    ir_raw_frame_t frame;
-
     DBG_LOG("[IR] Task started, waiting IR signal...");
 
     while (1) {
-        if (IR1838B_Available()) {
-            if (IR1838B_GetRaw(&frame)) {
-                update_recv_data(&frame);
-                IR1838B_PrintRaw(&frame);
-            }
+        /* 一帧收完（ir_receiver 内部已自动停捕获），取出数据并重启下一帧 */
+        if (ir_receiver_process(&g_ir_rx)) {
+            update_recv_data();
+            DBG_LOG("[IR] frame received, edges=%u", (unsigned)ir_receiver_count(&g_ir_rx));
+            (void)ir_receiver_start(&g_ir_rx);
         }
 
         process_send_request();
@@ -94,14 +101,12 @@ static void task_ir_entry(void *arg)
         /* 每 2 秒打印一次状态 */
         if (++status_cnt >= (2000 / IR_TASK_PERIOD_MS)) {
             status_cnt = 0;
-            IR1838B_PrintStatus();
+            DBG_LOG("[IR] alive");
         }
 
         vTaskDelay(pdMS_TO_TICKS(IR_TASK_PERIOD_MS));
     }
 }
-
-/* ========== 对外 API ========== */
 
 bool Task_IR_Init(void)
 {
@@ -110,16 +115,25 @@ bool Task_IR_Init(void)
         DBG_LOG("[IR] Mutex create failed");
     }
 
-    /* 设备初始化收口到 Task_X_Init（各任务自治，不在任务体内 init） */
-    static const ir_tx_cfg_t s_ir_tx_cfg = BOARD_IR_TX_CFG;
-    if (!IR1838B_Init(BOARD_IR_RX_PORT, BOARD_IR_RX_PIN, BOARD_IR_RX_TIM)) {
-        DBG_LOG("[IR] 1838B init failed");
+    /* 设备初始化收口到 Task_IR_Init（任务体内只跑逻辑） */
+    static const ir_receiver_cfg_t s_rx_cfg = {
+        .htim        = BOARD_IR_RX_TIM,
+        .channel     = BOARD_IR_RX_CHANNEL,
+        .clk_hz      = BOARD_IR_RX_CLK_HZ,
+        .buf         = s_rx_buf,
+        .cap         = BOARD_IR_RX_BUF_SIZE,
+        .idle_us     = BOARD_IR_RX_IDLE_US,
+        .debounce_us = BOARD_IR_RX_DEBOUNCE_US,
+    };
+    if (!ir_receiver_init(&g_ir_rx, &s_rx_cfg)) {
+        DBG_LOG("[IR] receiver init failed");
         return false;
     }
-    if (!IR_TX_Init(&s_ir_tx_cfg)) {
-        DBG_LOG("[IR] TX init failed");
+    if (!ir_receiver_start(&g_ir_rx)) {
+        DBG_LOG("[IR] receiver start failed");
         return false;
     }
+    /* 发射在 Task_IR_SendAc 内按需初始化（收/发已分到不同定时器，互不干扰） */
 
     if (xTaskCreate(task_ir_entry,
                     IR_TASK_NAME,
@@ -180,7 +194,6 @@ bool Task_IR_SendByMQTT(const uint8_t *cmd, uint16_t cmd_len)
     }
 
     if (g_send_req) {
-        /* 上一次还没处理完 */
         return false;
     }
 
@@ -194,7 +207,6 @@ bool Task_IR_SendByMQTT(const uint8_t *cmd, uint16_t cmd_len)
 bool Task_IR_SendAc(ac_brand_t brand, const ac_state_t *state)
 {
     static uint16_t s_timing[AC_CODEC_MAX_EDGES];
-    uint8_t  level_start = 0;
     uint16_t edges;
 
     if (state == NULL) {
@@ -205,7 +217,7 @@ bool Task_IR_SendAc(ac_brand_t brand, const ac_state_t *state)
     if (g_mutex != NULL) {
         osMutexAcquire(g_mutex, osWaitForever);
     }
-    edges = AC_Codec_Encode(brand, state, s_timing, AC_CODEC_MAX_EDGES, &level_start);
+    edges = AC_Codec_Encode(brand, state, s_timing, AC_CODEC_MAX_EDGES, NULL);
     if (edges == 0) {
         if (g_mutex != NULL) {
             osMutexRelease(g_mutex);
@@ -214,8 +226,26 @@ bool Task_IR_SendAc(ac_brand_t brand, const ac_state_t *state)
         return false;
     }
 
-    /* 发射：载波由 TIM9 硬件产生，此处按原始时序门控 */
-    bool ok = IR_TX_SendRaw(s_timing, edges, level_start, 1, 0);
+    /* 发射：SDK ir_transmitter 自配 TIM3 PWM 载波 + TIM6 µs 时基。
+     * 收/发已分到不同定时器（接收=TIM9 / 发射=TIM3），无需收发间重配。 */
+    static const ir_transmitter_cfg_t s_tx_cfg = {
+        .htim             = BOARD_IR_TX_TIM,
+        .channel          = BOARD_IR_TX_CHANNEL,
+        .tim_clk_hz       = BOARD_IR_TX_TIM_CLK_HZ,
+        .carrier_hz       = BOARD_IR_TX_CARRIER_HZ,
+        .duty_percent     = BOARD_IR_TX_DUTY,
+        .inverted         = BOARD_IR_TX_INVERTED,
+        .use_carrier      = BOARD_IR_TX_USE_CARRIER,
+        .tick_htim        = BOARD_IR_TICK_TIM,
+        .tick_tim_clk_hz  = BOARD_IR_TICK_CLK_HZ,
+    };
+
+    bool ok = false;
+    if (ir_transmitter_init(&g_ir_tx, &s_tx_cfg)) {
+        ok = ir_transmitter_send(&g_ir_tx, s_timing, edges);
+        ir_transmitter_deinit(&g_ir_tx);
+    }
+
     if (g_mutex != NULL) {
         osMutexRelease(g_mutex);
     }

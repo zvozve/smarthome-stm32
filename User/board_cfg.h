@@ -30,18 +30,35 @@ extern "C" {
 #define BOARD_HEART_IWDG        NULL          /* app 仍传 NULL（运行时安全空操作） */
 #define BOARD_HEART_IWDG_ENABLE 0             /* 经 MB_BOARD_CFG 由 SDK heart_beat 读取：0=不引 oop_iwdg_drv.h、不喂狗 */
 
-/* ---- 红外接收 1838B（VS1838B_DAT, PE5）+ 1ms 节拍 TIM6 ---- */
-#define BOARD_IR_RX_PORT        VS1838B_DAT_GPIO_Port
-#define BOARD_IR_RX_PIN         VS1838B_DAT_Pin
-#define BOARD_IR_RX_TIM         (&htim6)
-
-/* ---- 红外发射（PE6 = TIM9_CH2, AF3；38.46kHz 载波，占空比 ~35%） ----
- * TIM9 未入 CubeMX（.ioc），时基/通道由 ir_tx 驱动按此配置初始化，
- * 时钟（GPIOE + TIM9）由下面 board_io_init() 开启。
- * TIM9 挂 APB2，定时器时钟 168MHz：PSC=167 → 1MHz；ARR=25 → 26us ≈ 38.46kHz。
+/* ---- 红外接收（VS1838B_DAT, PE5 = TIM9_CH1, AF3）----
+ * 新 SDK ir_receiver 用 TIM 输入捕获；计数频率 = TIM_CLK/(PSC+1)。
+ * 本工程把接收 TIM 的 PSC 配成 167（TIM9 168MHz -> 1MHz 计数），ARR 取满量程，
+ * 以获得足够长的静默/帧结束检测窗口（NEC 引导码 9ms 不应被截断）。
+ * 后续若按 CubeMX 把收/发分到不同定时器，只改下面 BOARD_IR_RX_TIM 宏即可。
  */
-#define BOARD_IR_TX_CFG         { GPIOE, GPIO_PIN_6, GPIO_AF3_TIM9, \
-                                  TIM9, TIM_CHANNEL_2, 167, 25, 9 }
+#define BOARD_IR_RX_TIM              (&htim9)
+#define BOARD_IR_RX_CHANNEL          TIM_CHANNEL_1
+#define BOARD_IR_RX_CLK_HZ           1000000UL   /* TIM9 PSC=167 -> 1MHz 计数 */
+#define BOARD_IR_RX_BUF_SIZE         256         /* 时长缓冲条目数（偶数=mark/奇数=space） */
+#define BOARD_IR_RX_IDLE_US          0           /* 0 = 驱动默认 15000us */
+#define BOARD_IR_RX_DEBOUNCE_US      0           /* 0 = 驱动默认 200us */
+
+/* ---- 红外发射（PE6 = TIM9_CH2, AF3；38.46kHz 载波，占空比 ~35%）----
+ * 新 SDK ir_transmitter 自配 PWM 载波 + 注入的 µs 时基定时器（tick）。
+ * 当前收/发共用 TIM9（硬件 PE5/PE6 均 AF3-TIM9），为临时态；发送会在 Task_IR_SendAc
+ * 内临时把 TIM9 配成 PWM 载波、发完重配回接收参数。后续 CubeMX 把发射改到独立定时器
+ * 后，只改 BOARD_IR_TX_TIM / BOARD_IR_TICK_TIM 宏，ARR 冲突即消失，无需再手工恢复。
+ * TIM9 时钟由 board_io_init() 开启；GPIO AF 由本文件 MspInit 段开启。
+ */
+#define BOARD_IR_TX_TIM              (&htim9)
+#define BOARD_IR_TX_CHANNEL          TIM_CHANNEL_2
+#define BOARD_IR_TX_TIM_CLK_HZ       168000000UL /* TIM9 挂 APB2 = 168MHz */
+#define BOARD_IR_TX_CARRIER_HZ       38461UL     /* 38.46kHz */
+#define BOARD_IR_TX_DUTY             35
+#define BOARD_IR_TX_INVERTED         0
+#define BOARD_IR_TX_USE_CARRIER      1
+#define BOARD_IR_TICK_TIM            (&htim6)    /* µs 时基（基本定时器） */
+#define BOARD_IR_TICK_CLK_HZ         84000000UL  /* TIM6 挂 APB1 = 84MHz */
 
 /* ---- DHT11 温湿度（DHT11_DAT, PE2） ---- */
 #define BOARD_DHT11_PORT        DHT11_DAT_GPIO_Port
@@ -77,7 +94,10 @@ extern struct netif gnetif;   /* LwIP 全局网口（LWIP/App/lwip.c） */
  */
 static inline void board_io_init(void)
 {
-    __HAL_RCC_TIM9_CLK_ENABLE();
+    __HAL_RCC_TIM9_CLK_ENABLE();   /* 接收输入捕获（MspInit 亦开，这里先开稳妥） */
+    __HAL_RCC_TIM3_CLK_ENABLE();   /* 发射 PWM 载波 */
+    MX_TIM9_Init();                /* TIM9 实例/PSC/ARR（1MHz 计数，长静默窗口） */
+    MX_TIM3_Init();                /* TIM3 实例（PWM/时基由驱动自配） */
 }
 
 #ifdef __cplusplus

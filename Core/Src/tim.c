@@ -21,7 +21,31 @@
 #include "tim.h"
 
 /* USER CODE BEGIN 0 */
+/* 红外接收(TIM9)/发射(TIM3) 实例与初始化：未入 CubeMX，手写于 USER CODE 区，
+ * 重生成 CubeMX 不会覆盖。PWM/时基/输入捕获的实际配置由 SDK 驱动在运行期完成，
+ * 这里只把 Instance / PSC / ARR 等基础字段填好并触发 HAL_TIM_Base_Init。 */
+TIM_HandleTypeDef htim9;
+TIM_HandleTypeDef htim3;
 
+void MX_TIM9_Init(void)
+{
+  htim9.Instance = TIM9;
+  htim9.Init.Prescaler = 167;                 /* 168MHz -> 1MHz 计数，长静默检测窗口 */
+  htim9.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim9.Init.Period = 0xFFFF;
+  htim9.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim9) != HAL_OK) { Error_Handler(); }
+}
+
+void MX_TIM3_Init(void)
+{
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 0;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 0xFFFF;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK) { Error_Handler(); }
+}
 /* USER CODE END 0 */
 
 TIM_HandleTypeDef htim6;
@@ -75,7 +99,29 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
   /* USER CODE BEGIN TIM6_MspInit 1 */
-
+  /* 红外接收 TIM9 / 发射 TIM3 的时钟与 GPIO AF（未入 CubeMX，手写） */
+  if (tim_baseHandle->Instance == TIM9) {
+    __HAL_RCC_TIM9_CLK_ENABLE();
+    __HAL_RCC_GPIOE_CLK_ENABLE();
+    GPIO_InitTypeDef g = {0};
+    g.Pin = GPIO_PIN_5;                 /* PE5 = TIM9_CH1（VS1838B_DAT 接收） */
+    g.Mode = GPIO_MODE_AF_PP;
+    g.Pull = GPIO_PULLUP;               /* 接收头空闲高 */
+    g.Speed = GPIO_SPEED_FREQ_HIGH;
+    g.Alternate = GPIO_AF3_TIM9;
+    HAL_GPIO_Init(GPIOE, &g);
+  }
+  if (tim_baseHandle->Instance == TIM3) {
+    __HAL_RCC_TIM3_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    GPIO_InitTypeDef g = {0};
+    g.Pin = GPIO_PIN_5;                 /* PB5 = TIM3_CH2（IR 发射，电路改接） */
+    g.Mode = GPIO_MODE_AF_PP;
+    g.Pull = GPIO_NOPULL;
+    g.Speed = GPIO_SPEED_FREQ_HIGH;
+    g.Alternate = GPIO_AF2_TIM3;
+    HAL_GPIO_Init(GPIOB, &g);
+  }
   /* USER CODE END TIM6_MspInit 1 */
   }
 }

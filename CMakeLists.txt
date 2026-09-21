@@ -52,18 +52,18 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${USER_SOURCES}
 )
 
-# mystm32-sdk 组件（sdk.toml 拉取至 MySDK/，源文件与头文件清单由 SDK 自带的
+# mysdk-stm32 组件（sdk.toml 拉取至 MySDK/，源文件与头文件清单由 SDK 自带的
 # CMakeLists.txt 维护并随拉取更新；须位于 add_subdirectory(cmake/stm32cubemx)
 # 之后——组件需要其中的 stm32cubemx INTERFACE 目标获取 HAL/RTOS/LwIP 依赖）
 add_subdirectory(MySDK)
 
-# 让 mystm32 组件读取工程侧 board_cfg.h 的功能开关（SDK 内 MB_BOARD_CFG opt-in 机制）
+# 让 mysdk 组件读取工程侧 board_cfg.h 的功能开关（SDK 内 MB_BOARD_CFG opt-in 机制）
 # 须含 User/（board_cfg.h 本体）与 User/Inc/（board_cfg.h 传递包含 config_network.h）
-target_include_directories(mystm32 PUBLIC
+target_include_directories(mysdk PUBLIC
     ${CMAKE_SOURCE_DIR}/User
     ${CMAKE_SOURCE_DIR}/User/Inc
 )
-target_compile_definitions(mystm32 PUBLIC MB_BOARD_CFG)
+target_compile_definitions(mysdk PUBLIC MB_BOARD_CFG)
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
@@ -83,7 +83,7 @@ list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
-    mystm32
+    mysdk
 
     # Add user defined libraries
 )
@@ -97,13 +97,6 @@ if(TARGET LwIP)
     if(LWIP_SOURCES)
         list(FILTER LWIP_SOURCES EXCLUDE REGEX "/apps/mqtt/mqtt\\.c$")
         set_target_properties(LwIP PROPERTIES SOURCES "${LWIP_SOURCES}")
-        message(STATUS "Excluded LwIP apps/mqtt/mqtt.c (clashes with mystm32-sdk protocols/mqtt)")
+        message(STATUS "Excluded LwIP apps/mqtt/mqtt.c (clashes with mysdk-stm32 protocols/mqtt)")
     endif()
 endif()
-
-# 编译后自动生成 .hex 和 .bin 文件
-add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${CMAKE_PROJECT_NAME}> $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/${CMAKE_PROJECT_NAME}.hex
-    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${CMAKE_PROJECT_NAME}> $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/${CMAKE_PROJECT_NAME}.bin
-    COMMENT "Generating HEX and BIN firmware"
-)

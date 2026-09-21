@@ -21,15 +21,15 @@
  * =========================== */
 void app_main_init(void) {
     oop_InitDWT();
+    SEGGER_RTT_Init();
     board_io_init();      /* 非 CubeMX 管理的外设时钟（TIM9 载波定时器） */
     ETH_RST_Init(BOARD_ETH_RST_PORT, BOARD_ETH_RST_PIN);
-    SEGGER_RTT_Init();
     APP_LOG("========================================");
     APP_LOG("System initializing...");
     APP_LOG("FIRMWARE_VERSION: %s", FIRMWARE_VERSION);
 
-    /* 注意：PE5 的中断回调由 IR1838B_Init 统一注册，
-     * 不要在这里重复注册（同一引脚后注册会覆盖先注册者）。 */
+    /* 注意：PE5(TIM9_CH1) 红外接收中断由 Core 的 HAL_TIM_IC_CaptureCallback
+     * 转发到 task_ir_rx_isr()，不要在别处重复注册输入捕获回调。 */
 
     app_main_create_tasks();
 
@@ -54,7 +54,7 @@ void app_main_create_tasks(void) {
        由本函数统一调用；任务体只跑逻辑、不再各自 init 设备。 */
     Task_HeartBeat_Init();          /* 心跳 LED + 喂狗 */
 
-    /* IR 任务：1838B 接收（TIM6 静默收尾）+ 红外发射（TIM9 载波） */
+    /* IR 任务：TIM9 接收（SDK ir_receiver）+ TIM3 发射（SDK ir_transmitter） */
     if (Task_IR_Init()) {
         APP_LOG("IR task created");
     } else {
@@ -87,13 +87,13 @@ void app_main_task(void) {
             heart_beat_run();
         }
 
-        /* 周期性打印引脚电平状态 */
-        static uint32_t last_print = 0;
-        if (now - last_print >= 3000) {
-            last_print = now;
-            uint8_t level = HAL_GPIO_ReadPin(BOARD_IR_RX_PORT, BOARD_IR_RX_PIN);
-            APP_LOG("IR pin level: %d (idle should be 1)", level);
-        }
+        // /* 周期性打印引脚电平状态 */
+        // static uint32_t last_print = 0;
+        // if (now - last_print >= 3000) {
+        //     last_print = now;
+        //     uint8_t level = HAL_GPIO_ReadPin(BOARD_IR_RX_PORT, BOARD_IR_RX_PIN);
+        //     APP_LOG("IR pin level: %d (idle should be 1)", level);
+        // }
 
         osDelay(100);
     }

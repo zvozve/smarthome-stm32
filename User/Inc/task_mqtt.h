@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "config_network.h"
-#include "mqtt_codec.h" 
 
 #ifdef __cplusplus
 extern "C" {

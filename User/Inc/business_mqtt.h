@@ -2,7 +2,7 @@
 #define __BUSINESS_MQTT_H__
 
 #include <stdint.h>
-#include "mqtt_codec.h"    // device_status_t
+#include "mqtt_json_payload.h"    // device_status_t / mqtt_status_to_json
 #include "mqtt_client.h"   // MQTT_LOG
 
 #ifdef __cplusplus

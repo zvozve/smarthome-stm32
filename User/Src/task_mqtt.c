@@ -1,6 +1,5 @@
 #include "task_mqtt.h"
 #include "mqtt_client.h"
-#include "mqtt_codec.h"
 #include "business_mqtt.h"
 #include "task_wifi.h"
 #include "cJSON.h"
