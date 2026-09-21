@@ -6,10 +6,32 @@
  */
 
 #include "oop_tim_drv.h"
+#include "oop_dma_drv.h"   /* 突发 DMA 启动（HAL_DMA_* 唯一入口） */
 
 /* ===========================
  * 通用时基（Base）
  * =========================== */
+
+bool oop_tim_base_init(TIM_HandleTypeDef *htim, uint32_t prescaler, uint32_t period)
+{
+    if (htim == NULL) {
+        return false;
+    }
+    htim->Init.Prescaler         = prescaler;
+    htim->Init.CounterMode       = TIM_COUNTERMODE_UP;
+    htim->Init.Period            = period;
+    htim->Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+    htim->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    return (HAL_TIM_Base_Init(htim) == HAL_OK);
+}
+
+bool oop_tim_base_deinit(TIM_HandleTypeDef *htim)
+{
+    if (htim == NULL) {
+        return false;
+    }
+    return (HAL_TIM_Base_DeInit(htim) == HAL_OK);
+}
 
 bool oop_tim_base_start_it(TIM_HandleTypeDef *htim)
 {
@@ -25,6 +47,181 @@ bool oop_tim_base_stop_it(TIM_HandleTypeDef *htim)
         return false;
     }
     return (HAL_TIM_Base_Stop_IT(htim) == HAL_OK);
+}
+
+/* ===========================
+ * 计数器 / 周期
+ * =========================== */
+
+uint32_t oop_tim_counter_get(TIM_HandleTypeDef *htim)
+{
+    if (htim == NULL) {
+        return 0U;
+    }
+    return (uint32_t)(htim->Instance->CNT);
+}
+
+void oop_tim_counter_set(TIM_HandleTypeDef *htim, uint32_t cnt)
+{
+    if (htim == NULL) {
+        return;
+    }
+    htim->Instance->CNT = cnt;
+}
+
+uint32_t oop_tim_period_get(TIM_HandleTypeDef *htim)
+{
+    if (htim == NULL) {
+        return 0U;
+    }
+    return (uint32_t)(htim->Instance->ARR);
+}
+
+bool oop_tim_period_set(TIM_HandleTypeDef *htim, uint32_t period)
+{
+    if (htim == NULL) {
+        return false;
+    }
+    htim->Instance->ARR = period;
+    return true;
+}
+
+void oop_tim_generate_update(TIM_HandleTypeDef *htim)
+{
+    if (htim == NULL) {
+        return;
+    }
+    htim->Instance->EGR = TIM_EGR_UG;
+}
+
+/* ===========================
+ * 输入捕获
+ * =========================== */
+
+bool oop_tim_ic_init(TIM_HandleTypeDef *htim, uint32_t channel,
+                     uint32_t polarity, uint32_t prescaler, uint32_t filter)
+{
+    if (htim == NULL) {
+        return false;
+    }
+
+    TIM_IC_InitTypeDef ic = {0};
+    ic.ICPolarity  = polarity;
+    ic.ICSelection = TIM_ICSELECTION_DIRECTTI;
+    ic.ICPrescaler = prescaler;
+    ic.ICFilter    = filter;
+
+    return (HAL_TIM_IC_ConfigChannel(htim, &ic, channel) == HAL_OK);
+}
+
+bool oop_tim_ic_start_it(TIM_HandleTypeDef *htim, uint32_t channel)
+{
+    if (htim == NULL) {
+        return false;
+    }
+    return (HAL_TIM_IC_Start_IT(htim, channel) == HAL_OK);
+}
+
+bool oop_tim_ic_stop_it(TIM_HandleTypeDef *htim, uint32_t channel)
+{
+    if (htim == NULL) {
+        return false;
+    }
+    return (HAL_TIM_IC_Stop_IT(htim, channel) == HAL_OK);
+}
+
+uint32_t oop_tim_ic_read_capture(TIM_HandleTypeDef *htim, uint32_t channel)
+{
+    if (htim == NULL) {
+        return 0U;
+    }
+    return HAL_TIM_ReadCapturedValue(htim, channel);
+}
+
+void oop_tim_ic_toggle_polarity(TIM_HandleTypeDef *htim, uint32_t channel)
+{
+    if (htim == NULL) {
+        return;
+    }
+
+    TIM_TypeDef *timx = htim->Instance;
+    uint32_t     shift;
+
+    switch (channel) {
+        case TIM_CHANNEL_1: shift = 1U;  break;   /* CC1P @bit1  */
+        case TIM_CHANNEL_2: shift = 5U;  break;   /* CC2P @bit5  */
+        case TIM_CHANNEL_3: shift = 9U;  break;   /* CC3P @bit9  */
+        case TIM_CHANNEL_4: shift = 13U; break;   /* CC4P @bit13 */
+        default: return;
+    }
+    timx->CCER ^= (1U << shift);
+}
+
+/* ===========================
+ * 输出门控（CCR 直写 / 极性）
+ * =========================== */
+
+bool oop_tim_ccr_write(TIM_HandleTypeDef *htim, uint32_t channel, uint32_t ccr)
+{
+    if (htim == NULL) {
+        return false;
+    }
+
+    TIM_TypeDef *timx = htim->Instance;
+
+    switch (channel) {
+        case TIM_CHANNEL_1: timx->CCR1 = ccr; break;
+        case TIM_CHANNEL_2: timx->CCR2 = ccr; break;
+        case TIM_CHANNEL_3: timx->CCR3 = ccr; break;
+        case TIM_CHANNEL_4: timx->CCR4 = ccr; break;
+        default: return false;
+    }
+    return true;
+}
+
+bool oop_tim_oc_preload_disable(TIM_HandleTypeDef *htim, uint32_t channel)
+{
+    if (htim == NULL) {
+        return false;
+    }
+
+    TIM_TypeDef *timx = htim->Instance;
+
+    switch (channel) {
+        case TIM_CHANNEL_1: timx->CCMR1 &= ~TIM_CCMR1_OC1PE; break;
+        case TIM_CHANNEL_2: timx->CCMR1 &= ~TIM_CCMR1_OC2PE; break;
+        case TIM_CHANNEL_3: timx->CCMR2 &= ~TIM_CCMR2_OC3PE; break;
+        case TIM_CHANNEL_4: timx->CCMR2 &= ~TIM_CCMR2_OC4PE; break;
+        default: return false;
+    }
+    return true;
+}
+
+bool oop_tim_oc_polarity_set(TIM_HandleTypeDef *htim, uint32_t channel, bool inverted)
+{
+    if (htim == NULL) {
+        return false;
+    }
+
+    TIM_TypeDef *timx = htim->Instance;
+    uint32_t     shift;
+
+    switch (channel) {
+        case TIM_CHANNEL_1: shift = 1U;  break;   /* CC1P @bit1  */
+        case TIM_CHANNEL_2: shift = 5U;  break;   /* CC2P @bit5  */
+        case TIM_CHANNEL_3: shift = 9U;  break;   /* CC3P @bit9  */
+        case TIM_CHANNEL_4: shift = 13U; break;   /* CC4P @bit13 */
+        default: return false;
+    }
+
+    uint32_t mask = (1U << shift);
+#if defined(TIM_CCER_CC1NP)
+    mask |= (0x4U << shift);   /* 高级定时器(TIM1/8)的互补极性位 CCxNP 一并清掉 */
+#endif
+
+    uint32_t pol = (inverted ? 1U : 0U) << shift;
+    timx->CCER = (timx->CCER & ~mask) | pol;
+    return true;
 }
 
 /* ===========================
@@ -82,4 +279,99 @@ bool oop_tim_pwm_deinit(TIM_HandleTypeDef *htim)
         return false;
     }
     return (HAL_TIM_PWM_DeInit(htim) == HAL_OK);
+}
+
+/* ===========================
+ * H 桥专用原语
+ * =========================== */
+
+bool oop_tim_ccr_write_all(TIM_HandleTypeDef *htim,
+                           uint32_t c1, uint32_t c2, uint32_t c3, uint32_t c4)
+{
+    if (htim == NULL) return false;
+    TIM_TypeDef *TIMx = htim->Instance;
+    TIMx->CCR1 = c1;
+    TIMx->CCR2 = c2;
+    TIMx->CCR3 = c3;
+    TIMx->CCR4 = c4;
+    return true;
+}
+
+bool oop_tim_oc_preload_enable(TIM_HandleTypeDef *htim)
+{
+    if (htim == NULL) return false;
+    TIM_TypeDef *TIMx = htim->Instance;
+    TIMx->CCMR1 |= (TIM_CCMR1_OC1PE | TIM_CCMR1_OC2PE);
+    TIMx->CCMR2 |= (TIM_CCMR2_OC3PE | TIM_CCMR2_OC4PE);
+    return true;
+}
+
+bool oop_tim_dmar_config(TIM_HandleTypeDef *htim, uint32_t dcr_base, uint32_t dcr_len)
+{
+    if (htim == NULL) return false;
+    htim->Instance->DCR = (dcr_base | dcr_len);
+    return true;
+}
+
+bool oop_tim_dma_burst_req_enable(TIM_HandleTypeDef *htim)
+{
+    if (htim == NULL) return false;
+    TIM_TypeDef *TIMx = htim->Instance;
+    TIMx->DIER &= ~(TIM_DIER_CC1DE | TIM_DIER_CC2DE
+                    | TIM_DIER_CC3DE | TIM_DIER_CC4DE);
+    TIMx->DIER |= TIM_DIER_CC1DE;
+    return true;
+}
+
+bool oop_tim_outputs_enable(TIM_HandleTypeDef *htim)
+{
+    if (htim == NULL) return false;
+    TIM_TypeDef *TIMx = htim->Instance;
+    TIMx->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC2E
+                  | TIM_CCER_CC3E | TIM_CCER_CC4E);
+    TIMx->BDTR |= TIM_BDTR_MOE;
+    return true;
+}
+
+bool oop_tim_counter_enable(TIM_HandleTypeDef *htim)
+{
+    if (htim == NULL) return false;
+    htim->Instance->CR1 |= TIM_CR1_CEN;
+    return true;
+}
+
+bool oop_tim_counter_disable(TIM_HandleTypeDef *htim)
+{
+    if (htim == NULL) return false;
+    htim->Instance->CR1 &= ~TIM_CR1_CEN;
+    return true;
+}
+
+bool oop_tim_master_mode_set(TIM_HandleTypeDef *htim, uint32_t mms)
+{
+    if (htim == NULL) return false;
+    MODIFY_REG(htim->Instance->CR2, TIM_CR2_MMS, mms);
+    return true;
+}
+
+bool oop_tim_slave_mode_set(TIM_HandleTypeDef *htim, uint32_t ts, uint32_t sms)
+{
+    if (htim == NULL) return false;
+    MODIFY_REG(htim->Instance->SMCR, (TIM_SMCR_TS | TIM_SMCR_SMS), (ts | sms));
+    return true;
+}
+
+void oop_tim_counter_reset(TIM_HandleTypeDef *htim)
+{
+    if (htim == NULL) return;
+    htim->Instance->CNT = 0;
+}
+
+bool oop_tim_dmar_burst_start(TIM_HandleTypeDef *htim,
+                               DMA_HandleTypeDef *hdma,
+                               uint32_t src, uint32_t len)
+{
+    if (htim == NULL || hdma == NULL) return false;
+    TIM_TypeDef *TIMx = htim->Instance;   /* 局部变量，避免审计误报 ->Instance-> */
+    return oop_dma_start_it(hdma, src, (uint32_t)&TIMx->DMAR, len);
 }

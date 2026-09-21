@@ -1,16 +1,22 @@
 #ifndef __SEGGER_RTT_LOG_H
 #define __SEGGER_RTT_LOG_H
 
-#define RTT_USE_RTOS       1
-
 #include <stdint.h>
 
-#if RTT_USE_RTOS
-#include "FreeRTOS.h"
-#include "task.h"
-#define RTT_GET_TICK()      xTaskGetTickCount()
-#else
-#define RTT_GET_TICK()      (HAL_GetTick() > 0 ? HAL_GetTick() : 0)
+/* ============================================================
+ * 时间戳来源（middleware 层不碰 HAL / RTOS）
+ * ------------------------------------------------------------
+ * 本头不再 include hal_platform.h，也不再 include FreeRTOS.h：
+ * 时基一律取 chip 层的唯一出口 oop_GetTickMS()（内部自行区分 RTOS / 裸机）。
+ * 这里只做「外部符号声明」，不是 include —— 于是
+ *   - include 顺序无关：不管谁先 include 本头都不会有 implicit declaration；
+ *   - 未拉取 chip.oop_dwt 时在**链接期**报 undefined reference（fail-fast），
+ *     而不是像旧写法那样在 tick 停摆时静默打成 00:00:00。
+ * 需要换时基（如 PC 单测传假 tick）：-DRTT_GET_TICK=你的可调用表达式。
+ * ============================================================ */
+#ifndef RTT_GET_TICK
+    extern uint32_t oop_GetTickMS(void);
+    #define RTT_GET_TICK()      oop_GetTickMS()
 #endif
 
 #ifndef RTT_LOG_ENABLE
@@ -121,13 +127,17 @@
 #define HEX_LOG(prefix, data, len) HEX_PRINT(HEX_LOG_ENABLE, prefix, data, len)
 
 // ============================================================
-// 模块专属标签（APP / UART / MODBUS / HMI 等）不再集中在此处定义，
-// 否则本文件会随项目增多无限膨胀。请在各模块「最底层」头文件内自行定义，例如：
-//   - MODBUS_LOG  -> library/protocols/Modbus/Inc/modbus_core.h
+// 本文件只保留「通用」标签（RTT / SYS / ERR / WARN / INFO / DBG / HEX），
+// 这些是跨模块通用的诊断标签，无法归属到具体设备/协议。
+//
+// ⚠️ 模块专属标签（APP / UART / MODBUS / HMI / ...）不要在此集中定义，
+//    否则本文件会随项目增多无限膨胀。请在各模块「最底层」头文件内自行定义，
+//    复用本文件提供的 RTT_LOG_TAG 引擎即可，例如：
+//   - MODBUS_LOG -> library/protocols/Modbus/Inc/modbus_core.h
 //   - UART_LOG    -> library/chip/oop_uart/Inc/oop_uart_drv.h
+//   - HMI_LOG     -> library/devices/delta_dop_107/Inc/delta_dop_107.h
 //   - APP_LOG     -> 工程 User/Inc/app_main.h（应用层）
-//   - HMI_LOG     -> 工程 HMI 模块头文件（本工程无 HMI 模块，未定义）
-// 模块头只需 #include "SEGGER_RTT_Log.h" 即可复用 RTT_LOG_TAG 引擎。
+//    模块头只需 #include "SEGGER_RTT_Log.h" 即可拿到 RTT_LOG_TAG。
 // ============================================================
 
 #endif // __SEGGER_RTT_LOG_H

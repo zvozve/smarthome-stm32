@@ -4,7 +4,7 @@
 # 本文件与 board_cfg.h 同置于 User/（均为工程侧资产，不会被 sync 覆盖）；
 # dest 用 ../MySDK 使生成目录仍落在工程根（根 CMakeLists 的 add_subdirectory(MySDK) 不动）。
 
-sdk       = "C:/Container/Library/STM32-SDK/mystm32-sdk"
+sdk       = "C:/Container/Library/SDK-STM32/mysdk-stm32"
 dest      = "../MySDK"
 board_cfg = "board_cfg.h"
 
@@ -13,7 +13,7 @@ board_cfg = "board_cfg.h"
 "chip.oop_dwt"   = true   # DWT 微秒延时
 "chip.oop_gpio"  = true   # GPIO 抽象（含中断回调）
 "chip.oop_uart"  = true   # UART 驱动（hlk-rm58s 用）
-"chip.oop_tim"   = true   # TIM OOP 封装（ir_tx 载波 / ir_1838b 节拍）
+"chip.oop_tim"   = true   # TIM OOP 封装（ir_transmitter 载波 / ir_receiver 节拍）
 "chip.oop_iwdg"  = true   # IWDG OOP 封装（heart_beat 喂狗）
 "chip.platform"  = true   # HAL 统一入口（系列宏）
 
@@ -21,8 +21,8 @@ board_cfg = "board_cfg.h"
 "devices.dht11"      = true   # 温湿度（task_temperature）
 "devices.heart_beat" = true   # 心跳 LED（app）
 "devices.hlk_rm58s"  = true   # WiFi 模组（task_wifi）
-"devices.ir_1838b"   = true   # 红外接收（task_ir）
-"devices.ir_tx"      = true   # 红外发射（task_ir）
+"devices.ir_receiver"    = true   # 红外接收
+"devices.ir_transmitter" = true   # 红外发射
 "devices.lan8720a"   = true   # ETH PHY 复位（app）
 
 # ---- protocols：协议/算法 ----
