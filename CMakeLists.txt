@@ -55,7 +55,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 # mysdk-stm32 组件（sdk.toml 拉取至 MySDK/，源文件与头文件清单由 SDK 自带的
 # CMakeLists.txt 维护并随拉取更新；须位于 add_subdirectory(cmake/stm32cubemx)
 # 之后——组件需要其中的 stm32cubemx INTERFACE 目标获取 HAL/RTOS/LwIP 依赖）
-add_subdirectory(MySDK)
+add_subdirectory(MySDK/library)
 
 # 让 mysdk 组件读取工程侧 board_cfg.h 的功能开关（SDK 内 MB_BOARD_CFG opt-in 机制）
 # 须含 User/（board_cfg.h 本体）与 User/Inc/（board_cfg.h 传递包含 config_network.h）

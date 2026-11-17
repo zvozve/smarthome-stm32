@@ -1,0 +1,5 @@
+此目录由 mysdk-stm32/tools/sdk-pull.py 生成，请勿手工修改（会被下次拉取覆盖）。
+本目录随工程一并提交进版本库（不要 gitignore）：拿到工程的人没有 SDK 也能用这些工具。
+SDK 版本 : 0.13.1
+拉取时间 : 2026-11-17 16:22:31
+工具清单 : fw-flash, fw-ota-ymodem, fw-ota-pack, format-gbk2utf8, format-utf16be2utf8, gen-cmake-paths, check-eol, sdk-check-oop
